@@ -41,12 +41,15 @@ class AmulScraper:
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-plugins")
+        chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         
         try:
-            # Try to use webdriver-manager (without version parameter)
+            # Try to use webdriver-manager
             service = Service(ChromeDriverManager().install())
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            logger.info("Chrome WebDriver initialized")
+            logger.info("Chrome WebDriver initialized with webdriver-manager")
             
         except Exception as e:
             logger.error(f"Error with webdriver-manager: {e}")
@@ -63,6 +66,10 @@ class AmulScraper:
     def enter_pincode(self):
         """Enter PIN code on the Amul website and select from dropdown"""
         try:
+            if not self.driver:
+                logger.error("WebDriver is not initialized")
+                return False
+                
             # Find the PIN input field
             pin_input = WebDriverWait(self.driver, 15).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='PIN'], input[placeholder*='pin'], input[placeholder*='Pincode'], input[placeholder*='pincode']"))
@@ -83,11 +90,13 @@ class AmulScraper:
                     dropdown_item.click()
                 except Exception as e:
                     logger.warning(f"Normal click failed: {e}, trying JS click...")
-                    self.driver.execute_script("arguments[0].click();", dropdown_item)
+                    if self.driver:
+                        self.driver.execute_script("arguments[0].click();", dropdown_item)
                 logger.info(f"Selected PIN code from dropdown: {PIN_CODE}")
             except Exception as e:
                 logger.error(f"Dropdown with PIN code not found: {e}")
-                logger.error(self.driver.page_source)  # Log page source for debugging
+                if self.driver:
+                    logger.error(self.driver.page_source)  # Log page source for debugging
                 return False
 
             # Wait for the modal to disappear (input to become stale or invisible)
@@ -105,7 +114,8 @@ class AmulScraper:
 
         except Exception as e:
             logger.error(f"Error entering PIN code: {e}")
-            logger.error(self.driver.page_source)  # Log page source for debugging
+            if self.driver:
+                logger.error(self.driver.page_source)  # Log page source for debugging
             return False
             
     def scrape_products(self):
@@ -114,20 +124,44 @@ class AmulScraper:
             if not self.driver:
                 logger.error("WebDriver is not initialized.")
                 return []
+                
             # Wait for product cards to load
-            WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".product-grid-item"))
-            )
+            try:
+                WebDriverWait(self.driver, 15).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".product-grid-item"))
+                )
+                logger.info("Product grid items found")
+            except Exception as e:
+                logger.error(f"Product grid items not found: {e}")
+                # Log page source for debugging
+                if self.driver:
+                    logger.error(f"Page source: {self.driver.page_source[:1000]}...")  # First 1000 chars
+                return []
+                
             soup = BeautifulSoup(self.driver.page_source, 'html.parser')
             products = []
             product_elements = soup.select(".product-grid-item")
             if not product_elements:
                 logger.warning("No products found with .product-grid-item selector")
+                # Try alternative selectors
+                alternative_selectors = [".product-item", ".product", "[data-product]", ".item"]
+                for selector in alternative_selectors:
+                    product_elements = soup.select(selector)
+                    if product_elements:
+                        logger.info(f"Found products using alternative selector: {selector}")
+                        break
+                        
+            if not product_elements:
+                logger.error("No products found with any selector")
                 return []
+                
             for element in product_elements:
                 try:
                     # Product name
                     name_element = element.select_one(".product-grid-name a")
+                    if not name_element:
+                        # Try alternative name selectors
+                        name_element = element.select_one(".product-name a, .name a, h3 a, h4 a")
                     if not name_element:
                         continue
                     name = name_element.get_text(strip=True)
@@ -257,26 +291,51 @@ class AmulScraper:
                 logger.error("WebDriver is not initialized.")
                 return
             logger.info("Starting scraping cycle")
+            
+            # Navigate to the page
             self.driver.get(AMUL_URL)
+            logger.info(f"Navigated to {AMUL_URL}")
+            
+            # Wait for page to load
+            time.sleep(3)
+            
             if first_time:
                 # Only enter PIN code on the first cycle
+                logger.info("Entering PIN code...")
                 if not self.enter_pincode():
                     logger.error("Failed to enter PIN code")
                     return
             else:
                 # Wait for products to load (adjust selector as needed)
                 try:
-                    WebDriverWait(self.driver, 10).until(
+                    logger.info("Waiting for products to load...")
+                    WebDriverWait(self.driver, 15).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, ".product-grid-item"))
                     )
-                except Exception:
-                    logger.warning("Products did not load after refresh.")
+                    logger.info("Products loaded successfully")
+                except Exception as e:
+                    logger.warning(f"Products did not load after refresh: {e}")
+                    # Try to refresh the page
+                    logger.info("Refreshing page...")
+                    self.driver.refresh()
+                    time.sleep(5)
+                    try:
+                        WebDriverWait(self.driver, 15).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, ".product-grid-item"))
+                        )
+                        logger.info("Products loaded after refresh")
+                    except Exception as e2:
+                        logger.error(f"Products still not loading after refresh: {e2}")
+                        return
 
             # Scrape products
+            logger.info("Starting to scrape products...")
             products = self.scrape_products()
             if not products:
                 logger.warning("No products found")
                 return
+                
+            logger.info(f"Successfully scraped {len(products)} products")
                 
             # --- TEST MODE: Simulate a product restock ---
             if self.test_mode and products:
@@ -286,15 +345,19 @@ class AmulScraper:
             # --- END TEST MODE ---
             
             # Seed new products to backend
+            logger.info("Seeding products to backend...")
             self.seed_products_to_backend(products)
             
             # Check for stock changes
+            logger.info("Checking for stock changes...")
             self.check_stock_changes(products)
             
-            logger.info("Scraping cycle completed")
+            logger.info("Scraping cycle completed successfully")
             
         except Exception as e:
             logger.error(f"Error in scraping cycle: {e}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             
     def run_continuous(self):
         """Run scraper continuously with specified interval"""
