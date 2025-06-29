@@ -62,18 +62,6 @@ Amul Protein Products Notifier
         """.strip()
         
         return self.send_email(subscriber_email, subject, body)
-        
-    def send_bulk_notifications(self, subscribers, product_name, product_url=None):
-        """Send notifications to multiple subscribers"""
-        success_count = 0
-        total_count = len(subscribers)
-        
-        for email in subscribers:
-            if self.send_stock_notification(email, product_name, product_url):
-                success_count += 1
-                
-        logger.info(f"Sent {success_count}/{total_count} email notifications for {product_name}")
-        return success_count, total_count
 
 # Example usage
 if __name__ == "__main__":

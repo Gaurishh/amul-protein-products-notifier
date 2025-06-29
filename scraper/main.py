@@ -30,7 +30,6 @@ def main():
     parser.add_argument('--once', action='store_true', help='Run scraper once and exit')
     parser.add_argument('--continuous', action='store_true', help='Run scraper continuously')
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
-    parser.add_argument('--headless', action='store_true', help='Run browser in headless mode')
     parser.add_argument('--interval', type=int, default=SCRAPE_INTERVAL, 
                        help=f'Scraping interval in seconds (default: {SCRAPE_INTERVAL})')
     
@@ -40,20 +39,16 @@ def main():
     setup_logging(args.verbose)
     logger = logging.getLogger(__name__)
     
-    # Override config if headless mode is specified
-    if args.headless:
-        HEADLESS_MODE = True
-    
-    # Override interval if specified
-    if args.interval != SCRAPE_INTERVAL:
-        SCRAPE_INTERVAL = args.interval
-    
     logger.info("Starting Amul Protein Products Scraper")
     logger.info(f"Backend API: {BACKEND_API_BASE}")
     logger.info(f"Amul URL: {AMUL_URL}")
     logger.info(f"PIN Code: {PIN_CODE}")
     logger.info(f"Scrape Interval: {SCRAPE_INTERVAL}s")
     logger.info(f"Headless Mode: {HEADLESS_MODE}")
+    
+    # Override interval if specified
+    if args.interval != SCRAPE_INTERVAL:
+        SCRAPE_INTERVAL = args.interval
     
     # Initialize scraper
     scraper = AmulScraper()

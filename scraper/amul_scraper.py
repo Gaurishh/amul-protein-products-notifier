@@ -14,6 +14,7 @@ import logging
 from config import *
 from email_notifier import EmailNotifier
 import os
+from pymongo import MongoClient
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,17 +22,21 @@ logger = logging.getLogger(__name__)
 
 class AmulScraper:
     def __init__(self, test_mode=False):
+        self.test_mode = test_mode
         self.driver = None
         self.session = requests.Session()
-        self.previous_stock_status = {}  # Track previous stock status for notifications
         self.email_notifier = EmailNotifier()
-        self.test_mode = test_mode
+        self.mongo_client = MongoClient(MONGO_URI)
+        self.db = self.mongo_client.get_default_database()
+        self.stock_status_collection = self.db['stock_status']
+        self.previous_stock_status = self.load_stock_status()
         
     def setup_driver(self):
         """Set up Chrome WebDriver with appropriate options"""
         chrome_options = Options()
         if HEADLESS_MODE:
-            chrome_options.add_argument("--headless")
+            chrome_options.add_argument("--headless=new")
+        logger.info(f"Headless mode: {HEADLESS_MODE}")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
@@ -174,34 +179,76 @@ class AmulScraper:
             except Exception as e:
                 logger.error(f"Error seeding product {product['name']}: {e}")
                 
+    def load_stock_status(self):
+        try:
+            status_dict = {}
+            for doc in self.stock_status_collection.find():
+                status_dict[doc['productId']] = doc['sold_out']
+            return status_dict
+        except Exception as e:
+            logger.error(f"Error loading stock status from DB: {e}")
+            return {}
+
+    def save_stock_status(self):
+        try:
+            for productId, sold_out in self.previous_stock_status.items():
+                self.stock_status_collection.update_one(
+                    {'productId': productId},
+                    {'$set': {'sold_out': sold_out}},
+                    upsert=True
+                )
+        except Exception as e:
+            logger.error(f"Error saving stock status to DB: {e}")
+
     def check_stock_changes(self, current_products):
-        """Check for stock status changes and notify users"""
+        """Check for stock status changes and notify users with a single email for all restocked products"""
+        restocked_products = []
         for product in current_products:
             product_id = product['productId']
             current_status = product['sold_out']
             previous_status = self.previous_stock_status.get(product_id, None)
-            
+
             # If status changed from sold out to in stock
             if previous_status is not None and previous_status and not current_status:
                 logger.info(f"Product {product['name']} is back in stock!")
-                self.notify_subscribers(product_id, product['name'])
-                
+                restocked_products.append(product)
+
             # Update previous status
             self.previous_stock_status[product_id] = current_status
+        self.save_stock_status()
+
+        if restocked_products:
+            self.notify_all_subscribers(restocked_products)
             
-    def notify_subscribers(self, product_id, product_name):
-        """Notify subscribers when a product comes back in stock"""
+    def notify_all_subscribers(self, restocked_products):
+        """Send a single email to each subscriber listing only the products they subscribed to that are now back in stock"""
         try:
-            # Get subscribers for this product
-            response = self.session.get(f"{BACKEND_API_BASE}/product/{product_id}/subscribers")
-            if response.status_code == 200:
-                subscribers = response.json()
-                if subscribers:
-                    logger.info(f"Notifying {len(subscribers)} subscribers for {product_name}")
-                    # Send email notifications
-                    self.email_notifier.send_bulk_notifications(subscribers, product_name)
+            # Build a mapping: subscriber -> list of products
+            subscriber_to_products = {}
+            for product in restocked_products:
+                product_id = product['productId']
+                response = self.session.get(f"{BACKEND_API_BASE}/product/{product_id}/subscribers")
+                if response.status_code == 200:
+                    subscribers = response.json()
+                    for subscriber in subscribers:
+                        if subscriber not in subscriber_to_products:
+                            subscriber_to_products[subscriber] = []
+                        subscriber_to_products[subscriber].append(product)
+            if not subscriber_to_products:
+                logger.info("No subscribers to notify for restocked products.")
+                return
+            # Send one email to each subscriber with their relevant products
+            for subscriber, products in subscriber_to_products.items():
+                product_lines = [f"• {p['name']}" for p in products]
+                body = (
+                    "Hello!\n\nThe following products you subscribed to are now back in stock:\n\n" +
+                    "\n".join(product_lines) +
+                    "\n\nYou can now purchase them from the Amul website.\n\nBest regards,\nAmul Protein Products Notifier"
+                )
+                self.email_notifier.send_email(subscriber, "Products Back in Stock!", body)
+            logger.info(f"Sent restock notification to {len(subscriber_to_products)} subscribers for {len(restocked_products)} products.")
         except Exception as e:
-            logger.error(f"Error notifying subscribers for {product_name}: {e}")
+            logger.error(f"Error sending bulk restock notification: {e}")
             
     def run_scrape_cycle(self, first_time=False):
         """Run one complete scraping cycle"""
