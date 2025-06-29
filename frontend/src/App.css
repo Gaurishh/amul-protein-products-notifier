@@ -1,0 +1,134 @@
+body {
+  font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+  background: #f7fafc;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+.app-container {
+  max-width: 570px;
+  margin: 40px auto;
+  padding: 32px 28px 28px 28px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.04);
+}
+
+h1 {
+  font-size: 2.1rem;
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+  color: #2d3748;
+  letter-spacing: -1px;
+}
+
+h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.7rem;
+  color: #4a5568;
+}
+
+button, input[type="submit"], .UnsubscribeButton {
+  background: #3182ce;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5em 1.2em;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-top: 0.5em;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+button:hover, input[type="submit"]:hover {
+  background: #2563eb;
+}
+
+input[type="text"], input[type="email"] {
+  padding: 0.5em 0.8em;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 1rem;
+  margin-bottom: 0.7em;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+ul {
+  padding-left: 1.2em;
+  margin-bottom: 1em;
+}
+
+li {
+  margin-bottom: 0.7em;
+}
+
+input[type="checkbox"] {
+  width: 1.35em;
+  height: 1.35em;
+  accent-color: #3182ce;
+  border-radius: 6px;
+  margin-right: 0.7em;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+label {
+  font-size: 1.04rem;
+}
+
+.UnsubscribeButton {
+  background: #e53e3e;
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  transition: background 0.18s;
+}
+.UnsubscribeButton:hover {
+  background: #c53030;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 1.2em;
+}
+.button-group > button,
+.button-group > .UnsubscribeButton {
+  margin-right: 18px;
+}
+.button-group > button:last-child,
+.button-group > .UnsubscribeButton:last-child {
+  margin-right: 0;
+}
+
+@media (max-width: 600px) {
+  .app-container {
+    padding: 12px 4px;
+    max-width: 98vw;
+  }
+  h1 {
+    font-size: 1.3rem;
+  }
+}
+
+.logo-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 1.2rem;
+}
+.amul-logo {
+  display: block;
+  max-width: 150px;
+  height: auto;
+  margin: 0;
+}
+.logo-title-row h1 {
+  margin: 0;
+} 
