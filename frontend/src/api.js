@@ -1,4 +1,4 @@
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000/api'; // Adjust as needed
+const API_BASE = 'https://amul-protein-products-notifier-backend.onrender.com/api';
 
 export async function checkUser(email) {
   const res = await fetch(`${API_BASE}/user/${encodeURIComponent(email)}`);

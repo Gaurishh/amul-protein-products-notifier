@@ -11,6 +11,7 @@ function HomePage() {
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState('');
   const [forceEdit, setForceEdit] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleEmailSubmit = async (emailInput) => {
     setEmail(emailInput);
@@ -28,8 +29,10 @@ function HomePage() {
   };
 
   const handleSubscribe = async () => {
+    setLoading(true);
     if (!email || products.length === 0) {
       setMessage('Please fill all fields and select at least one product.');
+      setLoading(false);
       return;
     }
     await subscribeUser(email, products);
@@ -37,6 +40,7 @@ function HomePage() {
     setUser(userData);
     setMessage('Subscription saved! You will be notified when products are restocked.');
     setStep('done');
+    setLoading(false);
   };
 
   const handleUpdate = async () => {
@@ -76,9 +80,10 @@ function HomePage() {
       {step === 'products' && (
         <div>
           <ProductSelector selectedProducts={products} onChange={handleProductSelect} />
-          <button onClick={handleSubscribe} style={{ marginTop: 10 }}>
+          <button onClick={handleSubscribe} style={{ marginTop: 10 }} disabled={loading}>
             Subscribe
           </button>
+          {loading && <span className="spinner" style={{ marginLeft: 10 }}></span>}
         </div>
       )}
       {step === 'manage' && user && (
