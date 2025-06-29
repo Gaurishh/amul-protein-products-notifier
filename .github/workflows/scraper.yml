@@ -16,8 +16,17 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Install Chrome
+        run: |
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
       - name: Install dependencies
-        run: pip install -r scraper/requirements.txt
+        run: |
+          cd scraper
+          pip install -r requirements.txt
 
       - name: Run scraper
         env:
@@ -29,4 +38,6 @@ jobs:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           MONGO_URI: ${{ secrets.MONGO_URI }}
-        run: python scraper/main.py --once
+        run: |
+          cd scraper
+          python main.py --once
