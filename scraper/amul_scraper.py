@@ -383,7 +383,7 @@ class AmulScraper:
         """Run scraper once for testing"""
         try:
             self.setup_driver()
-            self.run_scrape_cycle()
+            self.run_scrape_cycle(first_time=True)
         finally:
             if self.driver:
                 self.driver.quit()
