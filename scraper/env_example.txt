@@ -1,6 +1,9 @@
 # Backend API configuration
 BACKEND_API_BASE=http://localhost:8000/api
 
+# Frontend configuration
+FRONTEND_BASE_URL=http://localhost:3000
+
 # Scraping configuration
 SCRAPE_INTERVAL=60
 HEADLESS_MODE=false

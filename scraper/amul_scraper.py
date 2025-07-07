@@ -273,13 +273,7 @@ class AmulScraper:
                 return
             # Send one email to each subscriber with their relevant products
             for subscriber, products in subscriber_to_products.items():
-                product_lines = [f"• {p['name']}" for p in products]
-                body = (
-                    "Hello!\n\nThe following products you subscribed to are now back in stock:\n\n" +
-                    "\n".join(product_lines) +
-                    "\n\nYou can now purchase them from the Amul website.\n\nBest regards,\nAmul Protein Products Notifier"
-                )
-                self.email_notifier.send_email(subscriber, "Products Back in Stock!", body)
+                self.email_notifier.send_bulk_stock_notification(subscriber, products)
             logger.info(f"Sent restock notification to {len(subscriber_to_products)} subscribers for {len(restocked_products)} products.")
         except Exception as e:
             logger.error(f"Error sending bulk restock notification: {e}")

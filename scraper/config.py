@@ -21,4 +21,7 @@ EMAIL_USER = os.getenv('EMAIL_USER', '')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD', '')
 
 # Database configuration
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/amul_products_notifier') 
+MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/amul_products_notifier')
+
+# Frontend configuration
+FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'http://localhost:3000') 

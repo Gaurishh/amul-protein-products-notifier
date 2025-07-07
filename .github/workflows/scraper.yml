@@ -2,7 +2,7 @@ name: Scheduled Scraper
 
 on:
   schedule:
-    - cron: "*/10 * * * *" # every 10 minutes (UTC)
+    - cron: "*/10 * * * *"
   workflow_dispatch: # allows manual runs
 
 jobs:

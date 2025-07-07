@@ -13,13 +13,20 @@ async function sendSubscriptionConfirmation(email, productIds) {
   });
   // Fetch product names
   const products = await Product.find({ productId: { $in: productIds } });
-  const productList = products.map(p => `• ${p.name}`).join('<br>');
+  const productList = products
+    .map(
+      p =>
+        `• <a href="https://shop.amul.com/en/product/${p.productId}">${p.name}</a>`
+    )
+    .join('<br>');
+  const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+  const unsubscribeLink = `${FRONTEND_BASE_URL}/unsubscribe?email=${encodeURIComponent(email)}`;
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
     to: email,
     subject: 'Subscription Confirmed - Amul Protein Products Restock Notifier',
-    text: `Thank you for subscribing! You will be notified when your selected products are restocked.\n\nYou subscribed for:\n${products.map(p => `- ${p.name}`).join('\n')}`,
-    html: `<p>Thank you for subscribing! You will be notified when your selected products are restocked.</p><p><b>You subscribed for:</b><br>${productList}</p>`,
+    text: `Thank you for subscribing! You will be notified when your selected products are restocked.\n\nYou subscribed for:\n${products.map(p => `- ${p.name}`).join('\n')}\n\n🔗 Browse all protein products: https://shop.amul.com/en/browse/protein\n\nIf you wish to unsubscribe from these notifications, click here: ${unsubscribeLink}\nIf you wish to edit your subscription, click here: ${FRONTEND_BASE_URL}/edit-subscription?email=${encodeURIComponent(email)}`,
+    html: `<p>Thank you for subscribing! You will be notified when your selected products are restocked.</p><p><b>You subscribed for:</b><br>${productList}</p><p>🔗 <a href="https://shop.amul.com/en/browse/protein">Browse all protein products</a></p><p>If you wish to unsubscribe from these notifications, <a href="${unsubscribeLink}">click here</a>.<br>If you wish to <b>edit your subscription</b>, <a href="${FRONTEND_BASE_URL}/edit-subscription?email=${encodeURIComponent(email)}">click here</a>.</p>`,
   });
 }
 
@@ -115,4 +122,4 @@ export async function deleteUser(req, res) {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-} 
+}

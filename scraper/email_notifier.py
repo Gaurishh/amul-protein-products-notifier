@@ -45,23 +45,49 @@ class EmailNotifier:
     def send_stock_notification(self, subscriber_email, product_name, product_url=None):
         """Send stock notification email to a subscriber"""
         subject = f"🎉 {product_name} is back in stock!"
+        unsubscribe_link = f"{FRONTEND_BASE_URL}/unsubscribe?email={subscriber_email}"
+        
+        # Construct product URL using productId format
+        if product_url:
+            product_display = f"<a href=\"{product_url}\">{product_name}</a>"
+        else:
+            product_display = product_name
         
         body = f"""
 Hello!
 
 Great news! The product you've been waiting for is now back in stock:
 
-📦 {product_name}
+📦 {product_display}
 
 You can now purchase it from the Amul website.
 
-{f"🔗 Product Link: {product_url}" if product_url else ""}
+🔗 Browse all protein products: https://shop.amul.com/en/browse/protein
+
+If you wish to unsubscribe from these notifications, click here: {unsubscribe_link}
 
 Best regards,
 Amul Protein Products Notifier
         """.strip()
         
         return self.send_email(subscriber_email, subject, body)
+
+    def send_bulk_stock_notification(self, subscriber_email, products):
+        """Send a bulk stock notification email to a subscriber for multiple products"""
+        unsubscribe_link = f"{FRONTEND_BASE_URL}/unsubscribe?email={subscriber_email}"
+        product_lines = []
+        for p in products:
+            product_url = f"https://shop.amul.com/en/product/{p['productId']}"
+            product_lines.append(f"• <a href=\"{product_url}\">{p['name']}</a>")
+        
+        body = (
+            "Hello!\n\nThe following products you subscribed to are now back in stock:\n\n" +
+            "\n".join(product_lines) +
+            f"\n\n🔗 Browse all protein products: https://shop.amul.com/en/browse/protein" +
+            f"\n\nIf you wish to unsubscribe from these notifications, click here: {unsubscribe_link}" +
+            "\n\nYou can now purchase them from the Amul website.\n\nBest regards,\nAmul Protein Products Notifier"
+        )
+        return self.send_email(subscriber_email, "Products Back in Stock!", body)
 
 # Example usage
 if __name__ == "__main__":

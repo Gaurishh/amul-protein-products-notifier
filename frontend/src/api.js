@@ -1,4 +1,5 @@
-const API_BASE = 'https://amul-protein-products-notifier-backend.onrender.com/api';
+// const API_BASE = 'https://amul-protein-products-notifier-backend.onrender.com/api';
+const API_BASE = 'http://localhost:8000/api';
 
 export async function checkUser(email) {
   const res = await fetch(`${API_BASE}/user/${encodeURIComponent(email)}`);
