@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Backend API configuration
-BACKEND_API_BASE = os.getenv('BACKEND_API_BASE', 'http://localhost:8000/api')
+# BACKEND_API_BASE = os.getenv('BACKEND_API_BASE', 'http://localhost:8000/api')
+BACKEND_API_BASE = os.getenv('BACKEND_API_BASE', 'https://amul-protein-products-notifier-backend.onrender.com/api')
 
 # Amul website configuration
 AMUL_URL = "https://shop.amul.com/en/browse/protein"
@@ -24,4 +25,5 @@ EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD', '')
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/amul_products_notifier')
 
 # Frontend configuration
-FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'http://localhost:3000') 
+# FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'http://localhost:3000') 
+FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'https://amul-protein-products-notifier.onrender.com') 

@@ -19,7 +19,8 @@ async function sendSubscriptionConfirmation(email, productIds) {
         `• <a href="https://shop.amul.com/en/product/${p.productId}">${p.name}</a>`
     )
     .join('<br>');
-  const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+  // const FRONTEND_BASE_URL = 'http://localhost:3000';
+  const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL;
   const unsubscribeLink = `${FRONTEND_BASE_URL}/unsubscribe?email=${encodeURIComponent(email)}`;
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
