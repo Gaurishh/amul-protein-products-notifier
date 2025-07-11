@@ -55,20 +55,16 @@ class EmailNotifier:
             product_display = product_name
         
         body = f"""
-Hello!
-
-Great news! The product you've been waiting for is now back in stock:
-
-📦 {product_display}
-
-You can now purchase it from the Amul website.
-
-🔗 Browse all protein products: https://shop.amul.com/en/browse/protein
-
-If you wish to unsubscribe from these notifications, click here: {unsubscribe_link}
-If you wish to edit your subscription, click here: {edit_subscription_link}
-
-Best regards,
+Hello!<br><br>
+Great news! The product you've been waiting for is now back in stock:<br><br>
+📦 {product_display}<br><br>
+You can now purchase it from the Amul website.<br><br>
+🔗 Browse all protein products: <a href=\"https://shop.amul.com/en/browse/protein\">https://shop.amul.com/en/browse/protein</a><br><br>
+If you wish to unsubscribe from these notifications, click the button below:<br>
+<a href=\"{unsubscribe_link}\" style=\"display:inline-block;padding:10px 20px;background:#d9534f;color:#fff;text-decoration:none;border-radius:5px;\">Unsubscribe</a><br><br>
+If you wish to edit your subscription, click the button below:<br>
+<a href=\"{edit_subscription_link}\" style=\"display:inline-block;padding:10px 20px;background:#0275d8;color:#fff;text-decoration:none;border-radius:5px;\">Edit Subscription</a><br><br>
+Best regards,<br>
 Amul Protein Products Notifier
         """.strip()
         
@@ -81,15 +77,18 @@ Amul Protein Products Notifier
         product_lines = []
         for p in products:
             product_url = f"https://shop.amul.com/en/product/{p['productId']}"
-            product_lines.append(f"• <a href=\"{product_url}\">{p['name']}</a>")
+            product_lines.append(f"<li><a href=\"{product_url}\">{p['name']}</a></li>")
         
         body = (
-            "Hello!\n\nThe following products you subscribed to are now back in stock:\n\n" +
-            "\n".join(product_lines) +
-            f"\n\n🔗 Browse all protein products: https://shop.amul.com/en/browse/protein" +
-            f"\n\nIf you wish to unsubscribe from these notifications, click here: {unsubscribe_link}" +
-            f"\nIf you wish to edit your subscription, click here: {edit_subscription_link}" +
-            "\n\nYou can now purchase them from the Amul website.\n\nBest regards,\nAmul Protein Products Notifier"
+            "Hello!<br><br>"
+            "The following products you subscribed to are now back in stock:<br><ul>"
+            + "".join(product_lines) + "</ul><br>"
+            + "🔗 Browse all protein products: <a href=\"https://shop.amul.com/en/browse/protein\">https://shop.amul.com/en/browse/protein</a><br><br>"
+            + "If you wish to unsubscribe from these notifications, click the button below:<br>"
+            + f"<a href=\"{unsubscribe_link}\" style=\"display:inline-block;padding:10px 20px;background:#d9534f;color:#fff;text-decoration:none;border-radius:5px;\">Unsubscribe</a><br><br>"
+            + "If you wish to edit your subscription, click the button below:<br>"
+            + f"<a href=\"{edit_subscription_link}\" style=\"display:inline-block;padding:10px 20px;background:#0275d8;color:#fff;text-decoration:none;border-radius:5px;\">Edit Subscription</a><br><br>"
+            + "You can now purchase them from the Amul website.<br><br>Best regards,<br>Amul Protein Products Notifier"
         )
         return self.send_email(subscriber_email, "Products Back in Stock!", body, is_html=True)
 
