@@ -46,6 +46,7 @@ class EmailNotifier:
         """Send stock notification email to a subscriber"""
         subject = f"🎉 {product_name} is back in stock!"
         unsubscribe_link = f"{FRONTEND_BASE_URL}/unsubscribe?email={subscriber_email}"
+        edit_subscription_link = f"{FRONTEND_BASE_URL}/edit-subscription?email={subscriber_email}"
         
         # Construct product URL using productId format
         if product_url:
@@ -65,6 +66,7 @@ You can now purchase it from the Amul website.
 🔗 Browse all protein products: https://shop.amul.com/en/browse/protein
 
 If you wish to unsubscribe from these notifications, click here: {unsubscribe_link}
+If you wish to edit your subscription, click here: {edit_subscription_link}
 
 Best regards,
 Amul Protein Products Notifier
@@ -75,6 +77,7 @@ Amul Protein Products Notifier
     def send_bulk_stock_notification(self, subscriber_email, products):
         """Send a bulk stock notification email to a subscriber for multiple products"""
         unsubscribe_link = f"{FRONTEND_BASE_URL}/unsubscribe?email={subscriber_email}"
+        edit_subscription_link = f"{FRONTEND_BASE_URL}/edit-subscription?email={subscriber_email}"
         product_lines = []
         for p in products:
             product_url = f"https://shop.amul.com/en/product/{p['productId']}"
@@ -85,6 +88,7 @@ Amul Protein Products Notifier
             "\n".join(product_lines) +
             f"\n\n🔗 Browse all protein products: https://shop.amul.com/en/browse/protein" +
             f"\n\nIf you wish to unsubscribe from these notifications, click here: {unsubscribe_link}" +
+            f"\nIf you wish to edit your subscription, click here: {edit_subscription_link}" +
             "\n\nYou can now purchase them from the Amul website.\n\nBest regards,\nAmul Protein Products Notifier"
         )
         return self.send_email(subscriber_email, "Products Back in Stock!", body, is_html=True)
