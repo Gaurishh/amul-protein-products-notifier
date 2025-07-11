@@ -13,7 +13,7 @@ class EmailNotifier:
         self.email_user = EMAIL_USER
         self.email_password = EMAIL_PASSWORD
         
-    def send_email(self, to_email, subject, body):
+    def send_email(self, to_email, subject, body, is_html=False):
         """Send a single email"""
         try:
             if not self.email_user or not self.email_password:
@@ -25,7 +25,7 @@ class EmailNotifier:
             msg['To'] = to_email
             msg['Subject'] = subject
             
-            msg.attach(MIMEText(body, 'plain'))
+            msg.attach(MIMEText(body, 'html' if is_html else 'plain'))
             
             server = smtplib.SMTP(self.smtp_server, self.smtp_port)
             server.starttls()
@@ -70,7 +70,7 @@ Best regards,
 Amul Protein Products Notifier
         """.strip()
         
-        return self.send_email(subscriber_email, subject, body)
+        return self.send_email(subscriber_email, subject, body, is_html=True)
 
     def send_bulk_stock_notification(self, subscriber_email, products):
         """Send a bulk stock notification email to a subscriber for multiple products"""
@@ -87,7 +87,7 @@ Amul Protein Products Notifier
             f"\n\nIf you wish to unsubscribe from these notifications, click here: {unsubscribe_link}" +
             "\n\nYou can now purchase them from the Amul website.\n\nBest regards,\nAmul Protein Products Notifier"
         )
-        return self.send_email(subscriber_email, "Products Back in Stock!", body)
+        return self.send_email(subscriber_email, "Products Back in Stock!", body, is_html=True)
 
 # Example usage
 if __name__ == "__main__":
