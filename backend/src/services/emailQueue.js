@@ -1,11 +1,5 @@
 import Queue from 'bull';
-import Redis from 'ioredis';
 
-// Create Redis connection
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-
-console.log('REDIS_URL:', process.env.REDIS_URL);
-// Create email queue
 const emailQueue = new Queue('email_notifications', process.env.REDIS_URL);
 
 // Queue configuration
