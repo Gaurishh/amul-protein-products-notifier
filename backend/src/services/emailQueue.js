@@ -5,13 +5,7 @@ import Redis from 'ioredis';
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 // Create email queue
-const emailQueue = new Queue('email_notifications', {
-  redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: process.env.REDIS_PORT || 6379,
-    password: process.env.REDIS_PASSWORD
-  }
-});
+const emailQueue = new Queue('email_notifications', process.env.REDIS_URL);
 
 // Queue configuration
 emailQueue.on('error', (error) => {
