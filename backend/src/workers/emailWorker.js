@@ -1,5 +1,15 @@
 import { emailQueue } from '../services/emailQueue.js';
 import { sendBulkStockNotification } from '../services/emailService.js';
+import http from 'http';
+
+// Dummy HTTP server for Render web service workaround
+const PORT = process.env.PORT_DUMMY || 7000;
+http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end('Worker running');
+}).listen(PORT, () => {
+  console.log(`Dummy server listening on port ${PORT}`);
+});
 
 // Process email jobs
 emailQueue.process('send_stock_notification', async (job) => {

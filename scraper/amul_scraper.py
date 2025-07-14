@@ -270,8 +270,7 @@ class AmulScraper:
             # Force the first product to be in stock (simulate restock)
             # Comment out the next two lines after testing
             # if products:
-            #     products[0]['sold_out'] = True
-            #     products[1]['sold_out'] = False
+            #     products[0]['sold_out'] = False
             #     logger.info(f"[TEST] Forced restock for product: {products[1]['name']} ({products[1]['productId']})")
             # === END RESTOCK SIMULATION ===
 
