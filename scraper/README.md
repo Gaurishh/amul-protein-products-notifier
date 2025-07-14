@@ -1,14 +1,14 @@
 # Amul Protein Products Scraper
 
-A Python-based web scraper that monitors Amul protein products for stock availability and sends notifications to subscribers when products come back in stock.
+A Python-based web scraper that monitors Amul protein products for stock availability and sends data to the backend for processing.
 
 ## Features
 
 - **Automated PIN Code Entry**: Automatically enters PIN code (122003) on the Amul website
 - **Product Scraping**: Scrapes all products from the protein category
 - **Stock Status Detection**: Identifies products marked as "SOLD OUT"
-- **Backend Integration**: Seeds new products to your Node.js backend
-- **Email Notifications**: Sends email alerts when products come back in stock
+- **Backend Integration**: Sends scraped data to your Node.js backend for processing
+- **Data Collection Only**: Focuses solely on data collection, email processing handled by backend
 - **Continuous Monitoring**: Runs continuously with configurable intervals
 
 ## Installation
@@ -39,11 +39,9 @@ BACKEND_API_BASE=http://localhost:8000/api
 SCRAPE_INTERVAL=60
 HEADLESS_MODE=false
 
-# Email configuration (for notifications)
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
+# Amul Website configuration
+AMUL_URL=https://shop.amul.com/en/browse/protein
+PIN_CODE=122003
 ```
 
 ## Usage
@@ -76,7 +74,6 @@ python main.py --once --verbose
 scraper/
 ├── main.py              # Main entry point
 ├── amul_scraper.py      # Core scraping logic
-├── email_notifier.py    # Email notification system
 ├── config.py            # Configuration management
 ├── requirements.txt     # Python dependencies
 ├── env_example.txt      # Environment variables example
@@ -88,25 +85,30 @@ scraper/
 1. **PIN Code Entry**: Uses Selenium to navigate to the Amul protein page and enter PIN code 122003
 2. **Product Scraping**: Scrapes all products using multiple CSS selectors to handle different page structures
 3. **Stock Detection**: Identifies "SOLD OUT" products by checking text content and specific CSS classes
-4. **Backend Seeding**: Sends new products to your backend API to populate the product catalog
-5. **Stock Change Detection**: Tracks stock status changes and triggers notifications
-6. **Email Notifications**: Sends emails to subscribers when products come back in stock
+4. **Data Processing**: Sends scraped data to backend API for stock change detection and email processing
+5. **Backend Integration**: Communicates with backend through REST API endpoints
 
 ## Backend Integration
 
 The scraper integrates with your Node.js backend through these endpoints:
 
-- `GET /api/products` - Fetch existing products
-- `POST /api/products` - Add new products (you'll need to add this endpoint)
-- `GET /api/product/:id/subscribers` - Get subscribers for notifications
+- `POST /api/stock-changes` - Send scraped product data for processing
+- `GET /api/products` - Fetch existing products (if needed)
 
-## Email Setup
+## Architecture
 
-For Gmail:
+This scraper is part of a separated architecture:
 
-1. Enable 2-factor authentication
-2. Generate an App Password
-3. Use the App Password in your `.env` file
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Scraper       │    │   Backend       │    │   Email Workers │
+│   (Data Only)   │───▶│   (API + Queue) │───▶│   (Processing)  │
+│                 │    │                 │    │                 │
+│ • Web scraping  │    │ • Stock changes │    │ • Send emails   │
+│ • Stock detect  │    │ • Queue jobs    │    │ • Handle retry  │
+│ • API calls     │    │ • User mgmt     │    │ • Rate limiting │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
 ## Troubleshooting
 
@@ -115,6 +117,7 @@ For Gmail:
 1. **Chrome Driver Issues**: The scraper uses `webdriver-manager` to automatically download the correct Chrome driver
 2. **No Products Found**: The scraper tries multiple CSS selectors. Check the logs to see which selector works
 3. **PIN Code Entry Fails**: The website structure might have changed. Check the CSS selector in `enter_pincode()`
+4. **Backend Connection Failed**: Check if the backend API is running and accessible
 
 ### Debug Mode
 
@@ -135,3 +138,36 @@ When modifying the scraper:
 1. Test with `--once` flag first
 2. Check the logs for any errors
 3. Update CSS selectors if the website structure changes
+4. Ensure backend API is running for full testing
+
+## Setup with Backend
+
+### 1. Start Backend API
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+### 2. Start Email Worker
+
+```bash
+cd backend
+npm run worker
+```
+
+### 3. Start Scraper
+
+```bash
+cd scraper
+python main.py --continuous
+```
+
+## Benefits of This Architecture
+
+- **Separation of Concerns**: Scraper focuses only on data collection
+- **Better Resource Usage**: Lighter scraper, heavy processing in backend
+- **Improved Scalability**: Multiple scrapers can feed one backend
+- **Easier Maintenance**: Clear separation between scraping and business logic
+- **Better Error Handling**: Failed emails are retried by backend queue system

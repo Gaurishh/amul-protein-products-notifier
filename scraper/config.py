@@ -9,21 +9,8 @@ BACKEND_API_BASE = os.getenv('BACKEND_API_BASE', 'https://amul-protein-products-
 
 # Amul website configuration
 AMUL_URL = "https://shop.amul.com/en/browse/protein"
-PIN_CODE = "122003"
+PIN_CODE = os.getenv('PIN_CODE', "122003")
 
 # Scraping configuration
 SCRAPE_INTERVAL = int(os.getenv('SCRAPE_INTERVAL', 60))  # seconds
 HEADLESS_MODE = os.getenv('HEADLESS_MODE', 'false').lower() == 'true'
-
-# Email configuration (for notifications)
-SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
-EMAIL_USER = os.getenv('EMAIL_USER', '')
-EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD', '')
-
-# Database configuration
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/amul_products_notifier')
-
-# Frontend configuration
-# FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'http://localhost:3000') 
-FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'https://amul-protein-products-notifier.onrender.com') 

@@ -12,9 +12,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import logging
 from config import *
-from email_notifier import EmailNotifier
-import os
-from pymongo import MongoClient
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -25,11 +22,6 @@ class AmulScraper:
         self.test_mode = test_mode
         self.driver = None
         self.session = requests.Session()
-        self.email_notifier = EmailNotifier()
-        self.mongo_client = MongoClient(MONGO_URI)
-        self.db = self.mongo_client.get_default_database()
-        self.stock_status_collection = self.db['stock_status']
-        self.previous_stock_status = self.load_stock_status()
         
     def setup_driver(self):
         """Set up Chrome WebDriver with appropriate options"""
@@ -133,150 +125,106 @@ class AmulScraper:
                 logger.info("Product grid items found")
             except Exception as e:
                 logger.error(f"Product grid items not found: {e}")
-                # Log page source for debugging
-                if self.driver:
-                    logger.error(f"Page source: {self.driver.page_source[:1000]}...")  # First 1000 chars
                 return []
                 
             soup = BeautifulSoup(self.driver.page_source, 'html.parser')
             products = []
             product_elements = soup.select(".product-grid-item")
+            
             if not product_elements:
                 logger.warning("No products found with .product-grid-item selector")
-                # Try alternative selectors
-                alternative_selectors = [".product-item", ".product", "[data-product]", ".item"]
-                for selector in alternative_selectors:
-                    product_elements = soup.select(selector)
-                    if product_elements:
-                        logger.info(f"Found products using alternative selector: {selector}")
-                        break
-                        
-            if not product_elements:
-                logger.error("No products found with any selector")
                 return []
                 
             for element in product_elements:
                 try:
-                    # Product name
-                    name_element = element.select_one(".product-grid-name a")
-                    if not name_element:
-                        # Try alternative name selectors
-                        name_element = element.select_one(".product-name a, .name a, h3 a, h4 a")
-                    if not name_element:
-                        continue
-                    name = name_element.get_text(strip=True)
-                    # Product ID (from href or name)
-                    href = name_element.get('href', '')
-                    product_id = href.split('/')[-1] if isinstance(href, str) and href else name.lower().replace(" ", "-")
-                    # Stock status
-                    sold_out = bool(element.select_one(".stock-indicator-text"))
-                    products.append({
-                        "productId": product_id,
-                        "name": name,
-                        "sold_out": sold_out
-                    })
+                    # Extract product information
+                    product_name = element.select_one(".product-name, .name, h3, h4")
+                    product_name = product_name.get_text(strip=True) if product_name else "Unknown Product"
+                    
+                    # Extract product ID from URL or data attribute
+                    product_link = element.select_one("a")
+                    product_id = None
+                    if product_link:
+                        href = product_link.get('href', '')
+                        if '/product/' in href:
+                            product_id = href.split('/product/')[-1].split('/')[0]
+                        elif '/en/product/' in href:
+                            product_id = href.split('/en/product/')[-1].split('/')[0]
+                    
+                    if not product_id:
+                        # Generate a product ID from name if not found
+                        product_id = product_name.lower().replace(' ', '-').replace('&', 'and')
+                    
+                    # Check if product is sold out
+                    sold_out = False
+                    sold_out_indicators = [
+                        "sold out", "out of stock", "unavailable", "not available"
+                    ]
+                    
+                    # Check text content for sold out indicators
+                    element_text = element.get_text().lower()
+                    for indicator in sold_out_indicators:
+                        if indicator in element_text:
+                            sold_out = True
+                            break
+                    
+                    # Check for specific CSS classes that indicate sold out
+                    sold_out_classes = [
+                        ".sold-out", ".out-of-stock", ".unavailable", 
+                        ".stock-status", ".availability"
+                    ]
+                    for class_name in sold_out_classes:
+                        sold_out_elem = element.select_one(class_name)
+                        if sold_out_elem:
+                            sold_out_text = sold_out_elem.get_text().lower()
+                            for indicator in sold_out_indicators:
+                                if indicator in sold_out_text:
+                                    sold_out = True
+                                    break
+                    
+                    product = {
+                        'productId': product_id,
+                        'name': product_name,
+                        'sold_out': sold_out
+                    }
+                    products.append(product)
+                    
                 except Exception as e:
-                    logger.error(f"Error parsing product element: {e}")
+                    logger.error(f"Error processing product element: {e}")
                     continue
-            logger.info(f"Scraped {len(products)} products")
+            
+            logger.info(f"Successfully scraped {len(products)} products")
             return products
+            
         except Exception as e:
             logger.error(f"Error scraping products: {e}")
             return []
             
-    def seed_products_to_backend(self, products):
-        """Send new products to backend API"""
-        for product in products:
-            try:
-                # Check if product already exists
-                response = self.session.get(f"{BACKEND_API_BASE}/products")
-                if response.status_code == 200:
-                    existing_products = response.json()
-                    product_exists = any(p.get('productId') == product['productId'] for p in existing_products)
-                    
-                    if not product_exists:
-                        # Add new product
-                        add_response = self.session.post(
-                            f"{BACKEND_API_BASE}/products",
-                            json={
-                                "productId": product['productId'],
-                                "name": product['name']
-                            },
-                            headers={'Content-Type': 'application/json'}
-                        )
-                        
-                        if add_response.status_code == 200:
-                            logger.info(f"Added new product: {product['name']}")
-                        else:
-                            logger.error(f"Failed to add product {product['name']}: {add_response.status_code}")
-                            
-            except Exception as e:
-                logger.error(f"Error seeding product {product['name']}: {e}")
+    def send_stock_changes_to_backend(self, products):
+        """Send scraped data to backend for processing"""
+        try:
+            response = self.session.post(
+                f"{BACKEND_API_BASE}/stock-changes",
+                json={
+                    'products': products,
+                    'timestamp': time.time(),
+                    'scraper_id': 'amul-scraper-1'
+                },
+                headers={'Content-Type': 'application/json'}
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"Successfully sent {len(products)} products to backend")
+                logger.info(f"Backend processed {result['processed']} products, {result['restocked']} restocked")
+                return True
+            else:
+                logger.error(f"Failed to send data to backend: {response.status_code}")
+                return False
                 
-    def load_stock_status(self):
-        try:
-            status_dict = {}
-            for doc in self.stock_status_collection.find():
-                status_dict[doc['productId']] = doc['sold_out']
-            return status_dict
         except Exception as e:
-            logger.error(f"Error loading stock status from DB: {e}")
-            return {}
-
-    def save_stock_status(self):
-        try:
-            for productId, sold_out in self.previous_stock_status.items():
-                self.stock_status_collection.update_one(
-                    {'productId': productId},
-                    {'$set': {'sold_out': sold_out}},
-                    upsert=True
-                )
-        except Exception as e:
-            logger.error(f"Error saving stock status to DB: {e}")
-
-    def check_stock_changes(self, current_products):
-        """Check for stock status changes and notify users with a single email for all restocked products"""
-        restocked_products = []
-        for product in current_products:
-            product_id = product['productId']
-            current_status = product['sold_out']
-            previous_status = self.previous_stock_status.get(product_id, None)
-
-            # If status changed from sold out to in stock
-            if previous_status is not None and previous_status and not current_status:
-                logger.info(f"Product {product['name']} is back in stock!")
-                restocked_products.append(product)
-
-            # Update previous status
-            self.previous_stock_status[product_id] = current_status
-        self.save_stock_status()
-
-        if restocked_products:
-            self.notify_all_subscribers(restocked_products)
-            
-    def notify_all_subscribers(self, restocked_products):
-        """Send a single email to each subscriber listing only the products they subscribed to that are now back in stock"""
-        try:
-            # Build a mapping: subscriber -> list of products
-            subscriber_to_products = {}
-            for product in restocked_products:
-                product_id = product['productId']
-                response = self.session.get(f"{BACKEND_API_BASE}/product/{product_id}/subscribers")
-                if response.status_code == 200:
-                    subscribers = response.json()
-                    for subscriber in subscribers:
-                        if subscriber not in subscriber_to_products:
-                            subscriber_to_products[subscriber] = []
-                        subscriber_to_products[subscriber].append(product)
-            if not subscriber_to_products:
-                logger.info("No subscribers to notify for restocked products.")
-                return
-            # Send one email to each subscriber with their relevant products
-            for subscriber, products in subscriber_to_products.items():
-                self.email_notifier.send_bulk_stock_notification(subscriber, products)
-            logger.info(f"Sent restock notification to {len(subscriber_to_products)} subscribers for {len(restocked_products)} products.")
-        except Exception as e:
-            logger.error(f"Error sending bulk restock notification: {e}")
+            logger.error(f"Error sending data to backend: {e}")
+            return False
             
     def run_scrape_cycle(self, first_time=False):
         """Run one complete scraping cycle"""
@@ -300,27 +248,16 @@ class AmulScraper:
                     logger.error("Failed to enter PIN code")
                     return
             else:
-                # Wait for products to load (adjust selector as needed)
+                # Wait for products to load
                 try:
-                    logger.info("Waiting for products to load...")
                     WebDriverWait(self.driver, 15).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, ".product-grid-item"))
                     )
                     logger.info("Products loaded successfully")
                 except Exception as e:
                     logger.warning(f"Products did not load after refresh: {e}")
-                    # Try to refresh the page
-                    logger.info("Refreshing page...")
                     self.driver.refresh()
                     time.sleep(5)
-                    try:
-                        WebDriverWait(self.driver, 15).until(
-                            EC.presence_of_element_located((By.CSS_SELECTOR, ".product-grid-item"))
-                        )
-                        logger.info("Products loaded after refresh")
-                    except Exception as e2:
-                        logger.error(f"Products still not loading after refresh: {e2}")
-                        return
 
             # Scrape products
             logger.info("Starting to scrape products...")
@@ -328,23 +265,21 @@ class AmulScraper:
             if not products:
                 logger.warning("No products found")
                 return
-                
+
+            # === RESTOCK SIMULATION FOR TESTING ===
+            # Force the first product to be in stock (simulate restock)
+            # Comment out the next two lines after testing
+            # if products:
+            #     products[0]['sold_out'] = True
+            #     products[1]['sold_out'] = False
+            #     logger.info(f"[TEST] Forced restock for product: {products[1]['name']} ({products[1]['productId']})")
+            # === END RESTOCK SIMULATION ===
+
             logger.info(f"Successfully scraped {len(products)} products")
                 
-            # --- TEST MODE: Simulate a product restock ---
-            if self.test_mode and products:
-                test_product_id = products[0]['productId']
-                logger.info(f"[TEST MODE] Forcing {test_product_id} to trigger restock notification.")
-                self.previous_stock_status[test_product_id] = True  # Simulate it was out of stock
-            # --- END TEST MODE ---
-            
-            # Seed new products to backend
-            logger.info("Seeding products to backend...")
-            self.seed_products_to_backend(products)
-            
-            # Check for stock changes
-            logger.info("Checking for stock changes...")
-            self.check_stock_changes(products)
+            # Send data to backend for processing
+            logger.info("Sending data to backend...")
+            self.send_stock_changes_to_backend(products)
             
             logger.info("Scraping cycle completed successfully")
             
@@ -384,6 +319,5 @@ class AmulScraper:
                 logger.info("WebDriver closed")
 
 if __name__ == "__main__":
-    scraper = AmulScraper(test_mode=True)
-    scraper.run_once()  # For testing
-    # scraper.run_continuous()  # For production 
+    scraper = AmulScraper(test_mode=False)
+    scraper.run_once() 

@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "dotenv": "^17.2.0",
+    "ioredis": "^5.6.1",
+    "mongod": "^2.0.0",
+    "mongoose": "^8.16.3",
+    "parse": "^6.1.1",
+    "redis-server": "^1.2.2"
+  }
+}

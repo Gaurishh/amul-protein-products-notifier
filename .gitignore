@@ -6,6 +6,7 @@
 .env.production.local
 
 # Dependencies
+scripts/
 node_modules/
 */node_modules/
 npm-debug.log*
