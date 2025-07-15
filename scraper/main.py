@@ -7,6 +7,8 @@ This scraper only handles data collection and sends data to backend for processi
 import argparse
 import logging
 import sys
+import threading
+import os
 from amul_scraper import AmulScraper
 from config import *
 
@@ -21,6 +23,11 @@ def setup_logging(verbose=False):
             logging.StreamHandler(sys.stdout)
         ]
     )
+
+def exit_after_timeout():
+    print("[TIMEOUT] Scraper exceeded 2 minutes. Exiting.")
+    sys.stdout.flush()
+    os._exit(1)
 
 def main():
     parser = argparse.ArgumentParser(description='Amul Protein Products Scraper')
@@ -68,4 +75,10 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    # Start a timer to exit after 120 seconds (2 minutes)
+    timeout_timer = threading.Timer(120, exit_after_timeout)
+    timeout_timer.start()
+    try:
+        main()
+    finally:
+        timeout_timer.cancel()

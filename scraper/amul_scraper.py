@@ -38,22 +38,29 @@ class AmulScraper:
         chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         
         try:
-            # Try to use webdriver-manager
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            logger.info("Chrome WebDriver initialized with webdriver-manager")
-            
+            self.driver = webdriver.Chrome(options=chrome_options)
+            logger.info("Chrome WebDriver initialized (system driver)")
         except Exception as e:
-            logger.error(f"Error with webdriver-manager: {e}")
-            logger.info("Trying alternative approach...")
+            logger.error(f"Error initializing Chrome WebDriver: {e}")
+            raise Exception("Could not initialize Chrome WebDriver. Please ensure Chrome is installed.")
+
+        # try:
+        #     # Try to use webdriver-manager
+        #     service = Service(ChromeDriverManager().install())
+        #     self.driver = webdriver.Chrome(service=service, options=chrome_options)
+        #     logger.info("Chrome WebDriver initialized with webdriver-manager")
             
-            try:
-                # Alternative: Try to use system ChromeDriver
-                self.driver = webdriver.Chrome(options=chrome_options)
-                logger.info("Chrome WebDriver initialized (system driver)")
-            except Exception as e2:
-                logger.error(f"Failed to initialize Chrome WebDriver: {e2}")
-                raise Exception("Could not initialize Chrome WebDriver. Please ensure Chrome is installed.")
+        # except Exception as e:
+        #     logger.error(f"Error with webdriver-manager: {e}")
+        #     logger.info("Trying alternative approach...")
+            
+        #     try:
+        #         self.driver = webdriver.Chrome(options=chrome_options)
+        #         logger.info("Chrome WebDriver initialized (system driver)")
+        #         # Alternative: Try to use system ChromeDriver
+        #     except Exception as e2:
+        #         logger.error(f"Failed to initialize Chrome WebDriver: {e2}")
+        #         raise Exception("Could not initialize Chrome WebDriver. Please ensure Chrome is installed.")
 
     def enter_pincode(self):
         """Enter PIN code on the Amul website and select from dropdown"""
