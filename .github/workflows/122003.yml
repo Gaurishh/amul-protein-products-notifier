@@ -3,7 +3,7 @@ name: 122003 Scraper
 on:
   schedule:
     - cron: "*/10 * * * *"
-  workflow_dispatch: # allows manual runs
+  workflow_dispatch:
 
 jobs:
   run-scraper:
@@ -16,18 +16,13 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install Chrome
-        run: |
-          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
+      - name: Confirm Chrome is available
+        run: google-chrome --version
 
       - name: Install dependencies
         run: |
           cd scraper
           pip install -r requirements.txt
-
       - name: Run scraper
         env:
           BACKEND_API_BASE: ${{ secrets.BACKEND_API_BASE }}
