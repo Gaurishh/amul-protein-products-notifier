@@ -36,6 +36,7 @@ def main():
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
     parser.add_argument('--interval', type=int, default=SCRAPE_INTERVAL, 
                        help=f'Scraping interval in seconds (default: {SCRAPE_INTERVAL})')
+    parser.add_argument('--pincode', type=str, default=None, help='PIN code to use for scraping (overrides .env)')
     
     args = parser.parse_args()
     
@@ -44,17 +45,18 @@ def main():
     logger = logging.getLogger(__name__)
     
     interval = args.interval
+    pincode = args.pincode if args.pincode else PIN_CODE
     
     logger.info("Starting Amul Protein Products Scraper")
     logger.info(f"Backend API: {BACKEND_API_BASE}")
     logger.info(f"Amul URL: {AMUL_URL}")
-    logger.info(f"PIN Code: {PIN_CODE}")
+    logger.info(f"PIN Code: {pincode}")
     logger.info(f"Scrape Interval: {interval}s")
     logger.info(f"Headless Mode: {HEADLESS_MODE}")
     logger.info("This scraper only collects data and sends to backend for processing")
     
     # Initialize scraper
-    scraper = AmulScraper()
+    scraper = AmulScraper(pincode=pincode)
     
     try:
         if args.once:

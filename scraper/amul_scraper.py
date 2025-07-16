@@ -18,10 +18,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 class AmulScraper:
-    def __init__(self, test_mode=False):
+    def __init__(self, test_mode=False, pincode=None):
+        from config import PIN_CODE
         self.test_mode = test_mode
         self.driver = None
         self.session = requests.Session()
+        self.pincode = pincode if pincode else PIN_CODE
         
     def setup_driver(self):
         """Set up Chrome WebDriver with appropriate options"""
@@ -74,14 +76,14 @@ class AmulScraper:
                 EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Pincode']"))
             )
             pin_input.clear()
-            pin_input.send_keys(PIN_CODE)
+            pin_input.send_keys(self.pincode)
             time.sleep(1.5)  # Give time for dropdown to appear
 
             # Wait for the dropdown item to appear (try both li and div)
             dropdown_item = None
             try:
                 dropdown_item = WebDriverWait(self.driver, 15).until(
-                    EC.presence_of_element_located((By.XPATH, f"//*[text()='{PIN_CODE}']"))
+                    EC.presence_of_element_located((By.XPATH, f"//*[text()='{self.pincode}']"))
                 )
                 logger.info("Dropdown item found, attempting to click...")
                 # Try normal click
@@ -91,7 +93,7 @@ class AmulScraper:
                     logger.warning(f"Normal click failed: {e}, trying JS click...")
                     if self.driver:
                         self.driver.execute_script("arguments[0].click();", dropdown_item)
-                logger.info(f"Selected PIN code from dropdown: {PIN_CODE}")
+                logger.info(f"Selected PIN code from dropdown: {self.pincode}")
             except Exception as e:
                 logger.error(f"Dropdown with PIN code not found: {e}")
                 if self.driver:
@@ -145,8 +147,8 @@ class AmulScraper:
             for element in product_elements:
                 try:
                     # Extract product information
-                    product_name = element.select_one(".product-name, .name, h3, h4")
-                    product_name = product_name.get_text(strip=True) if product_name else "Unknown Product"
+                    product_name_elem = element.select_one(".product-grid-name a")
+                    product_name = product_name_elem.get_text(strip=True) if product_name_elem else "Unknown Product"
                     
                     # Extract product ID from URL or data attribute
                     product_link = element.select_one("a")
@@ -216,7 +218,7 @@ class AmulScraper:
                     'products': products,
                     'timestamp': time.time(),
                     'scraper_id': 'amul-scraper-1',
-                    'pincode': PIN_CODE
+                    'pincode': self.pincode
                 },
                 headers={'Content-Type': 'application/json'}
             )
