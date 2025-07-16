@@ -1,4 +1,4 @@
-name: Scheduled Scraper
+name: 110036 Scraper
 
 on:
   schedule:
