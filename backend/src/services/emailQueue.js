@@ -23,20 +23,22 @@ emailQueue.on('failed', (job, err) => {
   console.error(`Job ${job.id} failed for ${job.data.subscriber}:`, err);
 });
 
-export async function enqueueEmailJobs(restockedProducts) {
+export async function enqueueEmailJobs(restockedProducts, pincode, app) {
   try {
+    const collectionName = `products_${pincode}`;
     // Group by subscriber
     const subscriberToProducts = {};
-    
     for (const product of restockedProducts) {
-      for (const subscriber of product.subscribers) {
+      // Fetch the latest subscribers for this product from the correct collection
+      const doc = await app.get('mongoose').connection.collection(collectionName).findOne({ productId: product.productId });
+      const subscribers = doc && doc.subscribers ? doc.subscribers : [];
+      for (const subscriber of subscribers) {
         if (!subscriberToProducts[subscriber]) {
           subscriberToProducts[subscriber] = [];
         }
         subscriberToProducts[subscriber].push(product);
       }
     }
-    
     // Enqueue jobs
     const jobs = [];
     for (const [subscriber, products] of Object.entries(subscriberToProducts)) {
@@ -57,10 +59,8 @@ export async function enqueueEmailJobs(restockedProducts) {
       });
       jobs.push(job);
     }
-    
     console.log(`Enqueued ${jobs.length} email jobs for ${Object.keys(subscriberToProducts).length} subscribers`);
     return jobs;
-    
   } catch (error) {
     console.error('Error enqueueing email jobs:', error);
     throw error;

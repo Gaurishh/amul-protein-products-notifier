@@ -42,7 +42,8 @@ mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-  .then(() => {
+  .then((mongooseInstance) => {
+    app.set('mongoose', mongooseInstance);
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log('Email queue system ready');

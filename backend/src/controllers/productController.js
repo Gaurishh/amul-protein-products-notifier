@@ -33,15 +33,3 @@ export async function addProduct(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
-
-// GET /product/:id/subscribers
-export async function getProductSubscribers(req, res) {
-  const { id } = req.params;
-  try {
-    const product = await Product.findOne({ productId: id });
-    if (!product) return res.status(404).json({ error: 'Product not found' });
-    res.json(product.subscribers);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-}

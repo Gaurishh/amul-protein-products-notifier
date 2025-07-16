@@ -1,5 +1,5 @@
-const API_BASE = 'https://amul-protein-products-notifier-backend.onrender.com/api';
-// const API_BASE = 'http://localhost:8000/api';
+// const API_BASE = 'https://amul-protein-products-notifier-backend.onrender.com/api';
+const API_BASE = 'http://localhost:8000/api';
 
 export async function checkUser(email) {
   const res = await fetch(`${API_BASE}/user/${encodeURIComponent(email)}`);
@@ -12,20 +12,20 @@ export async function getProducts() {
   return res.json();
 }
 
-export async function subscribeUser(email, products) {
+export async function subscribeUser(email, products, pincode) {
   const res = await fetch(`${API_BASE}/subscribe`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, products }),
+    body: JSON.stringify({ email, products, pincode }),
   });
   return res.json();
 }
 
-export async function updateUser(email, products) {
+export async function updateUser(email, products, pincode) {
   const res = await fetch(`${API_BASE}/user/${encodeURIComponent(email)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ products }),
+    body: JSON.stringify({ products, pincode }),
   });
   return res.json();
 }

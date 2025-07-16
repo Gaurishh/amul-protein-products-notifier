@@ -13,6 +13,7 @@ function useQuery() {
 function HomePage({ unsubscribeMode, editMode }) {
   const [step, setStep] = useState('email');
   const [email, setEmail] = useState('');
+  const [pincode, setPincode] = useState('');
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState('');
@@ -61,7 +62,7 @@ function HomePage({ unsubscribeMode, editMode }) {
     }
   }, [editMode, query]);
 
-  const handleEmailSubmit = async (emailInput) => {
+  const handleEmailSubmit = async ({ email: emailInput }) => {
     setEmail(emailInput);
     const userData = await checkUser(emailInput);
     if (userData) {
@@ -78,12 +79,12 @@ function HomePage({ unsubscribeMode, editMode }) {
 
   const handleSubscribe = async () => {
     setLoading(true);
-    if (!email || products.length === 0) {
+    if (!email || !products.length || !pincode) {
       setMessage('Please fill all fields and select at least one product.');
       setLoading(false);
       return;
     }
-    await subscribeUser(email, products);
+    await subscribeUser(email, products, pincode);
     const userData = await checkUser(email);
     setUser(userData);
     setMessage('Subscription saved! You will be notified when products are restocked.');
@@ -146,6 +147,18 @@ function HomePage({ unsubscribeMode, editMode }) {
       {!unsubscribeLoading && !editLoading && step === 'products' && (
         <div>
           <ProductSelector selectedProducts={products} onChange={handleProductSelect} />
+          <label>
+            Enter your pincode:
+            <input
+              type="text"
+              value={pincode}
+              required
+              pattern="\d{6}"
+              title="Please enter a valid 6-digit pincode"
+              onChange={e => setPincode(e.target.value)}
+              style={{ marginTop: 8, marginBottom: 8, width: '100%' }}
+            />
+          </label>
           <button onClick={handleSubscribe} style={{ marginTop: 10 }} disabled={loading}>
             Subscribe
           </button>

@@ -5,6 +5,7 @@ import { updateUser, unsubscribeUser, getProducts } from '../api';
 
 function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPage, startEditing, onEditingMount }) {
   const [products, setProducts] = useState(user.products);
+  const [pincode, setPincode] = useState(user.pincode || '');
   const [editing, setEditing] = useState(!!startEditing);
   const [message, setMessage] = useState('');
   const [productList, setProductList] = useState([]);
@@ -24,7 +25,7 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
 
   const handleSave = async () => {
     setLoading(true);
-    await updateUser(email, products);
+    await updateUser(email, products, pincode);
     setMessage('Subscription updated!');
     setEditing(false);
     setLoading(false);
@@ -49,6 +50,17 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
       <div>
         <h2>Update your subscription</h2>
         <ProductSelector selectedProducts={products} onChange={setProducts} />
+        <label>
+          Pincode:
+          <input
+            type="text"
+            value={pincode}
+            required
+            pattern="\\d{6}"
+            title="Please enter a valid 6-digit pincode"
+            onChange={e => setPincode(e.target.value)}
+          />
+        </label>
         <div className="button-group">
           <button onClick={handleSave} disabled={loading}>Save Changes</button>
           <button onClick={() => setEditing(false)} disabled={loading}>Cancel</button>
@@ -62,6 +74,7 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
     <div>
       <h2>Your Subscription</h2>
       <p><b>Email:</b> {email}</p>
+      <p><b>Pincode:</b> {user.pincode}</p>
       <p><b>Products:</b></p>
       {Object.entries(categorizeProducts(user.products)).map(([cat, items]) =>
         items.length > 0 && (

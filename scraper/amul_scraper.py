@@ -71,7 +71,7 @@ class AmulScraper:
                 
             # Find the PIN input field
             pin_input = WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='PIN'], input[placeholder*='pin'], input[placeholder*='Pincode'], input[placeholder*='pincode']"))
+                EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Pincode']"))
             )
             pin_input.clear()
             pin_input.send_keys(PIN_CODE)
@@ -101,7 +101,7 @@ class AmulScraper:
             # Wait for the modal to disappear (input to become stale or invisible)
             try:
                 WebDriverWait(self.driver, 10).until(
-                    EC.invisibility_of_element_located((By.CSS_SELECTOR, "input[placeholder*='PIN'], input[placeholder*='pin'], input[placeholder*='Pincode'], input[placeholder*='pincode']"))
+                    EC.invisibility_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Pincode']"))
                 )
                 logger.info("PIN modal closed.")
             except Exception:
@@ -215,7 +215,8 @@ class AmulScraper:
                 json={
                     'products': products,
                     'timestamp': time.time(),
-                    'scraper_id': 'amul-scraper-1'
+                    'scraper_id': 'amul-scraper-1',
+                    'pincode': PIN_CODE
                 },
                 headers={'Content-Type': 'application/json'}
             )
@@ -326,4 +327,4 @@ class AmulScraper:
 
 if __name__ == "__main__":
     scraper = AmulScraper(test_mode=False)
-    scraper.run_once() 
+    scraper.run_once()

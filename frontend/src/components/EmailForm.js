@@ -5,7 +5,7 @@ function EmailForm({ onSubmit }) {
 
   const handleSubmit = e => {
     e.preventDefault();
-    onSubmit(email);
+    onSubmit({ email });
   };
 
   return (
