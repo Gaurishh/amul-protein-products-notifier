@@ -2,7 +2,7 @@ import { enqueueEmailJobs } from '../services/emailQueue.js';
 
 // POST /stock-changes
 export async function processStockChanges(req, res) {
-  console.log('processStockChanges called. req.body:', req.body);
+  // console.log('processStockChanges called. req.body:', req.body);
   const { products, timestamp, scraper_id, pincode } = req.body;
 
   if (!products || !Array.isArray(products)) {

@@ -224,7 +224,10 @@ class AmulScraper:
             if response.status_code == 200:
                 result = response.json()
                 logger.info(f"Successfully sent {len(products)} products to backend")
-                logger.info(f"Backend processed {result['processed']} products, {result['restocked']} restocked")
+                if result.get('success'):
+                    logger.info("Backend processed successfully.")
+                else:
+                    logger.warning("Backend did not report success.")
                 return True
             else:
                 logger.error(f"Failed to send data to backend: {response.status_code}")
