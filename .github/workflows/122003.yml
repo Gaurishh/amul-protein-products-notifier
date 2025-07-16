@@ -1,4 +1,4 @@
-name: Scheduled Scraper
+name: 122003 Scraper
 
 on:
   schedule:
@@ -33,11 +33,6 @@ jobs:
           BACKEND_API_BASE: ${{ secrets.BACKEND_API_BASE }}
           SCRAPE_INTERVAL: "60"
           HEADLESS_MODE: "true"
-          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          MONGO_URI: ${{ secrets.MONGO_URI }}
         run: |
           cd scraper
-          python main.py --once
+          python main.py --once --pincode 110036
