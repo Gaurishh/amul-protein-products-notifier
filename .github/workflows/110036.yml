@@ -35,4 +35,4 @@ jobs:
           HEADLESS_MODE: "true"
         run: |
           cd scraper
-          python main.py --once
+          python main.py --once --pincode 110036
