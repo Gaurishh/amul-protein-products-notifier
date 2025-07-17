@@ -72,7 +72,7 @@ def get_scrape_status(job_id: str):
     status = job_status.get(job_id, "not_found")
     return {"job_id": job_id, "status": status}
 
-@app.get("/ping")
+@app.api_route("/ping", methods=["GET", "HEAD"])
 def ping():
     logging.info("pong")
     return {"message": "pong"} 

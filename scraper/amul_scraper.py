@@ -1,14 +1,10 @@
 import time
 import requests
-import json
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import logging
 from config import *
@@ -46,24 +42,6 @@ class AmulScraper:
         except Exception as e:
             logger.error(f"Error initializing Chrome WebDriver: {e}")
             raise Exception("Could not initialize Chrome WebDriver. Please ensure Chrome is installed.")
-
-        # try:
-        #     # Try to use webdriver-manager
-        #     service = Service(ChromeDriverManager().install())
-        #     self.driver = webdriver.Chrome(service=service, options=chrome_options)
-        #     logger.info("Chrome WebDriver initialized with webdriver-manager")
-            
-        # except Exception as e:
-        #     logger.error(f"Error with webdriver-manager: {e}")
-        #     logger.info("Trying alternative approach...")
-            
-        #     try:
-        #         self.driver = webdriver.Chrome(options=chrome_options)
-        #         logger.info("Chrome WebDriver initialized (system driver)")
-        #         # Alternative: Try to use system ChromeDriver
-        #     except Exception as e2:
-        #         logger.error(f"Failed to initialize Chrome WebDriver: {e2}")
-        #         raise Exception("Could not initialize Chrome WebDriver. Please ensure Chrome is installed.")
 
     def enter_pincode(self):
         """Enter PIN code on the Amul website and select from dropdown"""
@@ -327,14 +305,6 @@ class AmulScraper:
             
             logger.info("Scraping cycle completed successfully")
 
-            location_button = WebDriverWait(self.driver, 5).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "div[role='button'].pincode_wrap"))
-            )
-            location_button.click()
-            logger.info("Clicked location button to open PIN code modal.")
-
-            time.sleep(1.5)
-            
         except Exception as e:
             logger.error(f"Error in scraping cycle: {e}")
             import traceback
