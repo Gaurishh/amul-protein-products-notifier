@@ -9,6 +9,7 @@ http.createServer((req, res) => {
   if (req.url === '/ping') {
     res.writeHead(200);
     res.end('pong');
+    console.log('pong');
   } else {
     res.writeHead(200);
     res.end('Worker running');
