@@ -12,6 +12,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import logging
 from config import *
+from selenium.common.exceptions import ElementNotInteractableException, TimeoutException
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -70,11 +71,43 @@ class AmulScraper:
             if not self.driver:
                 logger.error("WebDriver is not initialized")
                 return False
-                
-            # Find the PIN input field
-            pin_input = WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Pincode']"))
-            )
+            
+            # Find the PIN input field robustly
+            try:
+                pin_input = WebDriverWait(self.driver, 15).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Pincode']"))
+                )
+                if not (pin_input.is_displayed() and pin_input.is_enabled()):
+                    raise ElementNotInteractableException("PIN input not interactable")
+            except (TimeoutException, ElementNotInteractableException):
+                print("hi1b: input not interactable, checking modal and location button")
+                # Check if modal is already open
+                modal_open = False
+                try:
+                    modal = self.driver.find_element(By.CSS_SELECTOR, "#locationWidgetModal.show")
+                    logger.info("Location modal is already open.")
+                    modal_open = True
+                except Exception:
+                    modal_open = False
+                if not modal_open:
+                    try:
+                        location_button = WebDriverWait(self.driver, 5).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "div[role='button'].pincode_wrap"))
+                        )
+                        location_button.click()
+                        logger.info("Clicked location button to open PIN code modal.")
+                        time.sleep(1)
+                    except Exception as e:
+                        logger.error(f"Could not find or click location button: {e}")
+                        return False
+                # Now wait for the input to become visible
+                try:
+                    pin_input = WebDriverWait(self.driver, 10).until(
+                        EC.visibility_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Pincode']"))
+                    )
+                except Exception as e:
+                    logger.error(f"Could not find PIN input after opening modal: {e}")
+                    return False
             pin_input.clear()
             pin_input.send_keys(self.pincode)
             time.sleep(1.5)  # Give time for dropdown to appear
@@ -239,7 +272,7 @@ class AmulScraper:
             logger.error(f"Error sending data to backend: {e}")
             return False
             
-    def run_scrape_cycle(self, first_time=False):
+    def run_scrape_cycle(self):
         """Run one complete scraping cycle"""
         try:
             if not self.driver:
@@ -247,30 +280,29 @@ class AmulScraper:
                 return
             logger.info("Starting scraping cycle")
             
-            # Navigate to the page
-            self.driver.get(AMUL_URL)
-            logger.info(f"Navigated to {AMUL_URL}")
+            # Navigate to the page only if not already there
+            if self.driver.current_url != AMUL_URL:
+                self.driver.get(AMUL_URL)
+                logger.info(f"Navigated to {AMUL_URL}")
             
             # Wait for page to load
             time.sleep(3)
+
+            # Only enter PIN code on the first cycle
+            logger.info("Entering PIN code...")
+            if not self.enter_pincode():
+                logger.error("Failed to enter PIN code")
+                return
             
-            if first_time:
-                # Only enter PIN code on the first cycle
-                logger.info("Entering PIN code...")
-                if not self.enter_pincode():
-                    logger.error("Failed to enter PIN code")
-                    return
-            else:
-                # Wait for products to load
-                try:
-                    WebDriverWait(self.driver, 15).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, ".product-grid-item"))
-                    )
-                    logger.info("Products loaded successfully")
-                except Exception as e:
-                    logger.warning(f"Products did not load after refresh: {e}")
-                    self.driver.refresh()
-                    time.sleep(5)
+            try:
+                WebDriverWait(self.driver, 15).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".product-grid-item"))
+                )
+                logger.info("Products loaded successfully")
+            except Exception as e:
+                logger.warning(f"Products did not load after refresh: {e}")
+                self.driver.refresh()
+                time.sleep(5)
 
             # Scrape products
             logger.info("Starting to scrape products...")
@@ -294,37 +326,25 @@ class AmulScraper:
             self.send_stock_changes_to_backend(products)
             
             logger.info("Scraping cycle completed successfully")
+
+            location_button = WebDriverWait(self.driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div[role='button'].pincode_wrap"))
+            )
+            location_button.click()
+            logger.info("Clicked location button to open PIN code modal.")
+
+            time.sleep(1.5)
             
         except Exception as e:
             logger.error(f"Error in scraping cycle: {e}")
             import traceback
             logger.error(f"Full traceback: {traceback.format_exc()}")
             
-    def run_continuous(self):
-        """Run scraper continuously with specified interval"""
-        try:
-            self.setup_driver()
-            logger.info(f"Starting continuous scraping with {SCRAPE_INTERVAL}s interval")
-            first_time = True
-            while True:
-                self.run_scrape_cycle(first_time=first_time)
-                first_time = False
-                time.sleep(SCRAPE_INTERVAL)
-                
-        except KeyboardInterrupt:
-            logger.info("Scraping stopped by user")
-        except Exception as e:
-            logger.error(f"Error in continuous scraping: {e}")
-        finally:
-            if self.driver:
-                self.driver.quit()
-                logger.info("WebDriver closed")
-                
     def run_once(self):
         """Run scraper once for testing"""
         try:
             self.setup_driver()
-            self.run_scrape_cycle(first_time=True)
+            self.run_scrape_cycle()
         finally:
             if self.driver:
                 self.driver.quit()
