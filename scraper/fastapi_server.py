@@ -70,4 +70,9 @@ def trigger_scrape(scrape_req: ScrapeRequest):
 @app.get("/scrape_status/{job_id}")
 def get_scrape_status(job_id: str):
     status = job_status.get(job_id, "not_found")
-    return {"job_id": job_id, "status": status} 
+    return {"job_id": job_id, "status": status}
+
+@app.get("/ping")
+def ping():
+    logging.info("pong")
+    return {"message": "pong"} 
