@@ -78,9 +78,10 @@ def main():
 
 if __name__ == "__main__":
     # Start a timer to exit after 120 seconds (2 minutes)
-    timeout_timer = threading.Timer(120, exit_after_timeout)
-    timeout_timer.start()
-    try:
-        main()
-    finally:
-        timeout_timer.cancel()
+    # timeout_timer = threading.Timer(120, exit_after_timeout)
+    # timeout_timer.start()
+    # try:
+    #     main()
+    # finally:
+    #     timeout_timer.cancel()
+    main()
