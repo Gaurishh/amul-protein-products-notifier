@@ -221,34 +221,37 @@ class AmulScraper:
             return []
             
     def send_stock_changes_to_backend(self, products):
-        """Send scraped data to backend for processing"""
-        try:
-            response = self.session.post(
-                f"{BACKEND_API_BASE}/stock-changes",
-                json={
-                    'products': products,
-                    'timestamp': time.time(),
-                    'scraper_id': 'amul-scraper-1',
-                    'pincode': self.pincode
-                },
-                headers={'Content-Type': 'application/json'}
-            )
+        """Send scraped data to backend for processing, with retry logic."""
+        max_retries = 3
+        delay = 1  # seconds
+        for attempt in range(max_retries):
+            try:
+                response = self.session.post(
+                    f"{BACKEND_API_BASE}/stock-changes",
+                    json={
+                        'products': products,
+                        'timestamp': time.time(),
+                        'scraper_id': 'amul-scraper-1',
+                        'pincode': self.pincode
+                    },
+                    headers={'Content-Type': 'application/json'}
+                )
 
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"Successfully sent {len(products)} products to backend")
-                if result.get('success'):
-                    logger.info("Backend processed successfully.")
+                if response.status_code == 200:
+                    result = response.json()
+                    logger.info(f"Successfully sent {len(products)} products to backend")
+                    if result.get('success'):
+                        logger.info("Backend processed successfully.")
+                    else:
+                        logger.warning("Backend did not report success.")
+                    return True
                 else:
-                    logger.warning("Backend did not report success.")
-                return True
-            else:
-                logger.error(f"Failed to send data to backend: {response.status_code}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error sending data to backend: {e}")
-            return False
+                    logger.error(f"Failed to send data to backend: {response.status_code}")
+            except Exception as e:
+                logger.error(f"Error sending data to backend (attempt {attempt+1}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(delay)
+        return False
             
     def run_scrape_cycle(self):
         """Run one complete scraping cycle"""
