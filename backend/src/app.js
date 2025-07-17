@@ -38,6 +38,12 @@ app.get('/api/queue-status', async (req, res) => {
   }
 });
 
+// Health check route for uptime monitoring
+app.get("/ping", (req, res) => {
+  console.log("pong");
+  res.status(200).send("pong");
+});
+
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
