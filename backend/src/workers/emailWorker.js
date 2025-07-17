@@ -4,9 +4,15 @@ import http from 'http';
 
 // Dummy HTTP server for Render web service workaround
 const PORT = process.env.PORT_DUMMY || 7000;
+
 http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end('Worker running');
+  if (req.url === '/ping') {
+    res.writeHead(200);
+    res.end('pong');
+  } else {
+    res.writeHead(200);
+    res.end('Worker running');
+  }
 }).listen(PORT, () => {
   console.log(`Dummy server listening on port ${PORT}`);
 });
