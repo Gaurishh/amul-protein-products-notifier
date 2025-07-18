@@ -78,6 +78,10 @@ Value: application/json
 
 ---
 
+### 🧾 Step 6: Hit Create
+
+---
+
 ## ✅ You're Done!
 
 Your scraper is now live and will check for product availability automatically every 15 minutes 🎉
