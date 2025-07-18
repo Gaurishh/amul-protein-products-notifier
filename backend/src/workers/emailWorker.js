@@ -20,12 +20,12 @@ http.createServer((req, res) => {
 
 // Process email jobs
 emailQueue.process('send_stock_notification', async (job) => {
-  const { subscriber, products } = job.data;
+  const { subscriber, products, pincode } = job.data;
   
   try {
     console.log(`Processing email job for ${subscriber} with ${products.length} products`);
     
-    const result = await sendBulkStockNotification(subscriber, products);
+    const result = await sendBulkStockNotification(subscriber, products, pincode);
     
     if (result) {
       console.log(`Successfully sent email to ${subscriber}`);

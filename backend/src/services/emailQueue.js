@@ -47,7 +47,8 @@ export async function enqueueEmailJobs(restockedProducts, pincode, app) {
         products: products.map(p => ({ 
           productId: p.productId, 
           name: p.name 
-        }))
+        })),
+        pincode
       }, {
         attempts: 3,
         backoff: {

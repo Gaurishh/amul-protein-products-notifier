@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export async function sendBulkStockNotification(subscriber, products) {
+export async function sendBulkStockNotification(subscriber, products, pincode) {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       console.warn("Email credentials not configured. Skipping email notification.");
@@ -36,31 +36,23 @@ export async function sendBulkStockNotification(subscriber, products) {
     const body = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2c3e50;">Products Back in Stock!</h2>
-        
+        <p><strong>Pincode:</strong> ${pincode}</p>
         <p>Hello!</p>
-        
         <p>The following products you subscribed to are now back in stock:</p>
-        
         <ul style="list-style-type: none; padding: 0;">
           ${productLines}
         </ul>
-        
         <p>🔗 <a href="https://shop.amul.com/en/browse/protein" style="color: #3498db;">Browse all protein products</a></p>
-        
         <p>You can now purchase them from the Amul website.</p>
-        
         <div style="margin: 30px 0;">
           <p>If you wish to unsubscribe from these notifications, click the button below:</p>
           <a href="${unsubscribeLink}" style="display: inline-block; padding: 10px 20px; background: #e74c3c; color: #fff; text-decoration: none; border-radius: 5px; margin: 10px 0;">Unsubscribe</a>
         </div>
-        
         <div style="margin: 30px 0;">
           <p>If you wish to edit your subscription, click the button below:</p>
           <a href="${editSubscriptionLink}" style="display: inline-block; padding: 10px 20px; background: #3498db; color: #fff; text-decoration: none; border-radius: 5px; margin: 10px 0;">Edit Subscription</a>
         </div>
-        
         <hr style="border: none; border-top: 1px solid #ecf0f1; margin: 30px 0;">
-        
         <p style="color: #7f8c8d; font-size: 12px;">
           Best regards,<br>
           Amul Protein Products Notifier
@@ -85,7 +77,7 @@ export async function sendBulkStockNotification(subscriber, products) {
   }
 }
 
-export async function sendSubscriptionConfirmation(email, productIds) {
+export async function sendSubscriptionConfirmation(email, productIds, pincode) {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       console.warn("Email credentials not configured. Skipping confirmation email.");
@@ -101,28 +93,22 @@ export async function sendSubscriptionConfirmation(email, productIds) {
     const body = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2c3e50;">Subscription Confirmed!</h2>
-        
+        <p><strong>Pincode:</strong> ${pincode}</p>
         <p>Thank you for subscribing! You will be notified when your selected products are restocked.</p>
-        
         <p><strong>You subscribed for:</strong></p>
         <ul>
           ${productIds.map(id => `<li>Product ID: ${id}</li>`).join('')}
         </ul>
-        
         <p>🔗 <a href="https://shop.amul.com/en/browse/protein" style="color: #3498db;">Browse all protein products</a></p>
-        
         <div style="margin: 30px 0;">
           <p>If you wish to unsubscribe from these notifications, click the button below:</p>
           <a href="${unsubscribeLink}" style="display: inline-block; padding: 10px 20px; background: #e74c3c; color: #fff; text-decoration: none; border-radius: 5px; margin: 10px 0;">Unsubscribe</a>
         </div>
-        
         <div style="margin: 30px 0;">
           <p>If you wish to edit your subscription, click the button below:</p>
           <a href="${editSubscriptionLink}" style="display: inline-block; padding: 10px 20px; background: #3498db; color: #fff; text-decoration: none; border-radius: 5px; margin: 10px 0;">Edit Subscription</a>
         </div>
-        
         <hr style="border: none; border-top: 1px solid #ecf0f1; margin: 30px 0;">
-        
         <p style="color: #7f8c8d; font-size: 12px;">
           Best regards,<br>
           Amul Protein Products Notifier

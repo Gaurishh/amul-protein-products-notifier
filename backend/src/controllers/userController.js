@@ -24,7 +24,7 @@ export async function subscribeUser(req, res) {
       );
     }
     // Send confirmation email (do not block response on error)
-    sendSubscriptionConfirmation(email, products).catch((err) => {
+    sendSubscriptionConfirmation(email, products, pincode).catch((err) => {
       console.error('Failed to send confirmation email:', err);
     });
     res.json({ message: 'Subscription saved', pincode });
