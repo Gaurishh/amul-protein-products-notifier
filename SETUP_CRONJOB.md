@@ -84,7 +84,7 @@ Value: application/json
 
 ## ✅ You're Done!
 
-Your scraper is now live and will check for product availability automatically every 15 minutes 🎉
+Your scraper is now live and will check for product availability at the configured pincode automatically every 15 minutes 🎉
 
 ---
 
