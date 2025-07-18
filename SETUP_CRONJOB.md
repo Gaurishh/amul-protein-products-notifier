@@ -89,4 +89,4 @@ Your scraper is now live and will check for product availability at the configur
 ---
 
 ### 📌 Tip:
-You can monitor your job status, failures, and execution logs directly on your [cron-job.org dashboard](https://cron-job.org/en/dashboard/)
+You can monitor your job status, failures, and execution logs directly on your [cron-job.org dashboard](https://console.cron-job.org/jobs)
