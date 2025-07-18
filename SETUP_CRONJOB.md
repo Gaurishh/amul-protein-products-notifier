@@ -17,6 +17,7 @@ Automate product availability checks using [cron-job.org](https://cron-job.org) 
 ### ➕ Step 2: Create a New Cronjob
 
 - After logging in, click **"Create Cronjob"**
+- Optionally, you may add your title.
 - In the **URL input box**, enter:
 
 ```
@@ -77,11 +78,15 @@ Value: application/json
 
 ---
 
+### 🧾 Step 6: Hit Create
+
+---
+
 ## ✅ You're Done!
 
-Your scraper is now live and will check for product availability automatically every 15 minutes 🎉
+Your scraper is now live and will check for product availability at the configured pincode automatically every 15 minutes 🎉
 
 ---
 
 ### 📌 Tip:
-You can monitor your job status, failures, and execution logs directly on your [cron-job.org dashboard](https://cron-job.org/en/dashboard/)
+You can monitor your job status, failures, and execution logs directly on your [cron-job.org dashboard](https://console.cron-job.org/jobs)
