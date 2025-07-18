@@ -80,6 +80,8 @@ Value: application/json
 
 ### 🧾 Step 6: Hit Create
 
+- The cron-job has been created, wait for upto 5-10 minutes before trying to validate the pincode on [Products Notifier Website](https://amul-protein-products-notifier.onrender.com)
+
 ---
 
 ## ✅ You're Done!
