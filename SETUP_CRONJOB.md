@@ -17,6 +17,7 @@ Automate product availability checks using [cron-job.org](https://cron-job.org) 
 ### ➕ Step 2: Create a New Cronjob
 
 - After logging in, click **"Create Cronjob"**
+- Optionally, you may add your title.
 - In the **URL input box**, enter:
 
 ```
