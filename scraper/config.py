@@ -15,4 +15,4 @@ PIN_CODE = os.getenv('PIN_CODE', "122003")  # Default, can be overridden at runt
 HEADLESS_MODE = os.getenv('HEADLESS_MODE', 'false').lower() == 'true'
 
 # MongoDB configuration
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://gaurish:bhavya@cluster0.3iqbaxu.mongodb.net/amul_protein_products_notifier?retryWrites=true&w=majority')
+MONGO_URI = os.getenv('MONGO_URI', '')
