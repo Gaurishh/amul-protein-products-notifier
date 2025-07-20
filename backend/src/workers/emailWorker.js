@@ -1,5 +1,5 @@
 import { emailQueue } from '../services/emailQueue.js';
-import { sendBulkStockNotification } from '../services/emailService.js';
+import { sendBulkStockNotification, sendExpiryNotification } from '../services/emailService.js';
 import http from 'http';
 
 // Dummy HTTP server for Render web service workaround
@@ -53,6 +53,23 @@ emailQueue.on('failed', (job, err) => {
 // Handle job retry
 emailQueue.on('retry', (job, err) => {
   console.log(`Email job ${job.id} will be retried for ${job.data.subscriber}:`, err.message);
+});
+
+emailQueue.process('send_expiry_notification', async (job) => {
+  const { email, pincode } = job.data;
+  try {
+    console.log(`Processing expiry notification job for ${email} (pincode: ${pincode})`);
+    const result = await sendExpiryNotification(email, pincode);
+    if (result) {
+      console.log(`Successfully sent expiry notification to ${email}`);
+      return { success: true, email };
+    } else {
+      throw new Error(`Failed to send expiry notification to ${email}`);
+    }
+  } catch (error) {
+    console.error(`Error processing expiry notification job for ${email}:`, error);
+    throw error;
+  }
 });
 
 console.log('Email worker started. Waiting for jobs...');

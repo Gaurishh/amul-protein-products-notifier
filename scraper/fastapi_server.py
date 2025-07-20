@@ -7,14 +7,21 @@ from threading import Thread, Lock
 from queue import Queue
 import uuid
 import time
+from pymongo import MongoClient
+from config import MONGO_URI
+from datetime import datetime, timedelta
+import requests
+from config import BACKEND_API_BASE
 
 scraper = None
 scrape_queue = Queue()
 queue_lock = Lock()
 job_status = {}
 
-class ScrapeRequest(BaseModel):
-    pincode: str
+# MongoDB setup
+client = MongoClient(MONGO_URI)
+db = client.get_database()
+pincodes_collection = db["pincodes"]
 
 @asynccontextmanager
 async def lifespan(app):
@@ -55,17 +62,46 @@ def process_queue():
 app = FastAPI(lifespan=lifespan)
 
 @app.post("/scrape")
-def trigger_scrape(scrape_req: ScrapeRequest):
+def trigger_scrape():
     """
-    Queue a scraping cycle for a specific pincode. Returns a job ID for status tracking.
+    Queue a scraping cycle for all pincodes in the MongoDB collection.
+    If a pincode's lastInteracted is more than 7 days old, delete it instead of scraping.
+    Returns a list of job IDs for status tracking.
     """
     global scraper
     if not scraper or not scraper.driver:
         return {"success": False, "message": "Scraper or driver not initialized."}
-    job_id = str(uuid.uuid4())
-    job_status[job_id] = "queued"
-    scrape_queue.put((job_id, scrape_req.pincode))
-    return {"success": True, "message": f"Scraping job queued for pincode {scrape_req.pincode}.", "job_id": job_id}
+    now = datetime.utcnow()
+    week_ago = now - timedelta(days=7)
+    job_ids = []
+    pincodes_cursor = pincodes_collection.find({}, {"pincode": 1, "lastInteracted": 1})
+    for doc in pincodes_cursor:
+        pincode = doc["pincode"]
+        last_interacted = doc.get("lastInteracted")
+        if last_interacted:
+            # Convert to datetime if it's not already
+            if isinstance(last_interacted, str):
+                last_interacted = datetime.fromisoformat(last_interacted)
+            elif hasattr(last_interacted, 'to_pydatetime'):
+                last_interacted = last_interacted.to_pydatetime()
+        if not last_interacted or last_interacted >= week_ago:
+            job_id = str(uuid.uuid4())
+            job_status[job_id] = "queued"
+            scrape_queue.put((job_id, pincode))
+            job_ids.append({"pincode": pincode, "job_id": job_id})
+        else:
+            # lastInteracted is older than a week, delete this pincode via backend API
+            try:
+                resp = requests.delete(f"{BACKEND_API_BASE}/pincode/{pincode}")
+                if resp.status_code != 200:
+                    logging.error(f"Failed to delete pincode {pincode} via backend API: {resp.status_code} {resp.text}")
+            except Exception as e:
+                logging.error(f"Exception while deleting pincode {pincode} via backend API: {e}")
+    return {
+        "success": True,
+        "message": f"Scraping jobs queued for {len(job_ids)} pincodes. Old pincodes deleted.",
+        "jobs": job_ids
+    }
 
 @app.get("/scrape_status/{job_id}")
 def get_scrape_status(job_id: str):

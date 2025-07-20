@@ -23,6 +23,13 @@ export async function subscribeUser(req, res) {
         { upsert: true }
       );
     }
+    // Track pincode interaction (update lastInteracted)
+    const now = new Date();
+    await req.app.get('mongoose').connection.collection('pincodes').updateOne(
+      { pincode },
+      { $set: { lastInteracted: now } },
+      { upsert: true }
+    );
     // Send confirmation email (do not block response on error)
     sendSubscriptionConfirmation(email, products, pincode).catch((err) => {
       console.error('Failed to send confirmation email:', err);
@@ -73,6 +80,13 @@ export async function updateUser(req, res) {
         { upsert: true }
       );
     }
+    // Track pincode interaction (update lastInteracted)
+    const now = new Date();
+    await req.app.get('mongoose').connection.collection('pincodes').updateOne(
+      { pincode: user.pincode },
+      { $set: { lastInteracted: now } },
+      { upsert: true }
+    );
     res.json({ message: 'Subscription updated', pincode: user.pincode });
   } catch (err) {
     res.status(500).json({ error: err.message });

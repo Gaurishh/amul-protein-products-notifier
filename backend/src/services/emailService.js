@@ -132,3 +132,50 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode) {
     return false;
   }
 } 
+
+export async function sendExpiryNotification(email, pincode) {
+  try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      console.warn("Email credentials not configured. Skipping expiry notification email.");
+      return false;
+    }
+
+    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL;
+    const resubscribeLink = `${FRONTEND_BASE_URL}`;
+
+    const subject = 'Subscription Expired - Amul Protein Products Notifier';
+
+    const body = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #e74c3c;">Subscription Expired</h2>
+        <p><strong>Pincode:</strong> ${pincode}</p>
+        <p>Hello,</p>
+        <p>Your subscription for Amul Protein Products notifications has expired due to inactivity.</p>
+        <p>If you wish to continue receiving notifications, please resubscribe using the link below:</p>
+        <div style="margin: 30px 0;">
+          <a href="${resubscribeLink}" style="display: inline-block; padding: 10px 20px; background: #3498db; color: #fff; text-decoration: none; border-radius: 5px; margin: 10px 0;">Resubscribe</a>
+        </div>
+        <hr style="border: none; border-top: 1px solid #ecf0f1; margin: 30px 0;">
+        <p style="color: #7f8c8d; font-size: 12px;">
+          Best regards,<br>
+          Amul Protein Products Notifier
+        </p>
+      </div>
+    `;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: subject,
+      html: body
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`Expiry notification email sent to ${email}`);
+    return true;
+
+  } catch (error) {
+    console.error(`Failed to send expiry notification email to ${email}:`, error);
+    return false;
+  }
+} 

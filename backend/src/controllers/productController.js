@@ -1,4 +1,7 @@
 import Product from '../models/Product.js';
+import Pincode from '../models/Pincode.js';
+import { emailQueue } from '../services/emailQueue.js';
+import { enqueueExpiryNotifications } from '../services/emailQueue.js';
 
 // GET /products
 export async function getProducts(req, res) {
@@ -60,5 +63,66 @@ export async function verifyPincode(req, res) {
     return res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, reason: 'error', error: err.message });
+  }
+}
+
+// POST /track-pincode
+export async function trackPincodeInteraction(req, res) {
+  const { pincode } = req.body;
+  if (!pincode) {
+    return res.status(400).json({ success: false, error: 'Missing pincode' });
+  }
+  try {
+    const now = new Date();
+    const updated = await Pincode.findOneAndUpdate(
+      { pincode },
+      { $set: { lastInteracted: now } },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true, pincode: updated.pincode, lastInteracted: updated.lastInteracted });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+// DELETE /pincode/:pincode
+export async function deletePincode(req, res) {
+  const { pincode } = req.params;
+  if (!pincode) {
+    return res.status(400).json({ success: false, error: 'Missing pincode' });
+  }
+  try {
+    // Gather all unique emails from products_PINCODE collection
+    const collectionName = `products_${pincode}`;
+    const productDocs = await req.app.get('mongoose').connection.collection(collectionName).find({}, { projection: { subscribers: 1 } }).toArray();
+    const uniqueEmails = new Set();
+    for (const doc of productDocs) {
+      (doc.subscribers || []).forEach(email => uniqueEmails.add(email));
+    }
+    let notificationResult = null;
+    if (uniqueEmails.size > 0) {
+      await enqueueExpiryNotifications(Array.from(uniqueEmails), pincode);
+      notificationResult = `Expiry notifications enqueued for ${uniqueEmails.size} emails.`;
+    }
+    // Delete the pincode from the Pincode collection
+    const result = await Pincode.deleteOne({ pincode });
+    let collectionDropResult = null;
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, error: 'Pincode not found', notificationResult });
+    }
+    // Drop the products_PINCODE collection
+    try {
+      await req.app.get('mongoose').connection.dropCollection(collectionName);
+      collectionDropResult = `Collection ${collectionName} dropped.`;
+    } catch (dropErr) {
+      // If collection does not exist, ignore error
+      if (dropErr.codeName !== 'NamespaceNotFound') {
+        return res.status(500).json({ success: false, error: dropErr.message, notificationResult });
+      }
+      collectionDropResult = `Collection ${collectionName} did not exist.`;
+    }
+    res.json({ success: true, message: `Pincode ${pincode} deleted`, notificationResult, collectionDropResult });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 }

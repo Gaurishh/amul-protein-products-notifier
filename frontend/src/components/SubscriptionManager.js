@@ -89,10 +89,12 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
         )
       )}
       <div className="button-group">
-        <button onClick={() => setEditing(true)} disabled={loading}>Edit Subscription</button>
-        <UnsubscribeButton onUnsubscribe={handleUnsubscribe} disabled={loading} />
+        {/* Removed Edit Subscription and Unsubscribe buttons */}
         <button onClick={goToEmailPage} style={{ background: '#4a5568', color: '#fff' }} disabled={loading}>Back</button>
         {loading && <span className="spinner" style={{ marginLeft: 10 }}></span>}
+      </div>
+      <div style={{ marginTop: 18, color: '#555', fontSize: '0.98em' }}>
+        <b>Note:</b> You may edit or unsubscribe from your subscription by clicking the links provided in the emails you receive from us.
       </div>
       {message && <div style={{ color: 'green' }}>{message}</div>}
     </div>

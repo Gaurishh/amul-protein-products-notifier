@@ -68,6 +68,32 @@ export async function enqueueEmailJobs(restockedProducts, pincode, app) {
   }
 }
 
+export async function enqueueExpiryNotifications(emails, pincode) {
+  try {
+    const jobs = [];
+    for (const email of emails) {
+      const job = await emailQueue.add('send_expiry_notification', {
+        email,
+        pincode
+      }, {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000
+        },
+        removeOnComplete: 100,
+        removeOnFail: 50
+      });
+      jobs.push(job);
+    }
+    console.log(`Enqueued ${jobs.length} expiry notification jobs for pincode ${pincode}`);
+    return jobs;
+  } catch (error) {
+    console.error('Error enqueueing expiry notification jobs:', error);
+    throw error;
+  }
+}
+
 export async function getQueueStatus() {
   try {
     const waiting = await emailQueue.getWaiting();

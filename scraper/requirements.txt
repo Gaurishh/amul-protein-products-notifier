@@ -6,3 +6,4 @@ webdriver-manager==4.0.1
 fastapi
 uvicorn
 pydantic 
+pymongo

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import EmailForm from '../components/EmailForm';
 import ProductSelector from '../components/ProductSelector';
 import SubscriptionManager from '../components/SubscriptionManager';
-import { checkUser, subscribeUser, unsubscribeUser, verifyPincode } from '../api';
+import { checkUser, subscribeUser, unsubscribeUser, verifyPincode, trackPincode } from '../api';
 import { useLocation } from 'react-router-dom';
 
 function useQuery() {
@@ -21,9 +21,6 @@ function HomePage({ unsubscribeMode, editMode }) {
   const [loading, setLoading] = useState(false);
   const [unsubscribeLoading, setUnsubscribeLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
-  const [pincodeVerified, setPincodeVerified] = useState(false);
-  const [pincodeVerifyLoading, setPincodeVerifyLoading] = useState(false);
-  const [pincodeVerifyError, setPincodeVerifyError] = useState('');
   const query = useQuery();
 
   // Auto-unsubscribe if in unsubscribeMode and email param is present
@@ -121,29 +118,11 @@ function HomePage({ unsubscribeMode, editMode }) {
     setProducts([]);
     setMessage('');
     setPincode('');
-    setPincodeVerified(false);
   };
 
   // Helper to validate pincode
   const isValidPincode = (code) => {
     return /^([1-9][0-9]{5})$/.test(code);
-  };
-
-  const handlePincodeVerify = async () => {
-    setPincodeVerifyLoading(true);
-    setPincodeVerifyError('');
-    try {
-      const result = await verifyPincode(pincode);
-      if (result.success) {
-        setPincodeVerified(true);
-        setStep('products');
-      } else {
-        setPincodeVerifyError('You need to set up a scraper for this pincode: ');
-      }
-    } catch (e) {
-      setPincodeVerifyError('Failed checking existence of a scraper');
-    }
-    setPincodeVerifyLoading(false);
   };
 
   return (
@@ -179,52 +158,79 @@ function HomePage({ unsubscribeMode, editMode }) {
               type="text"
               value={pincode}
               required
-              pattern="\d{6}"
+              pattern="\\d{6}"
               title="Please enter a valid 6-digit pincode"
               onChange={e => {
                 setPincode(e.target.value);
-                setPincodeVerified(false);
-                setPincodeVerifyError('');
               }}
               style={{ marginTop: 8, marginBottom: 8, width: '100%' }}
               maxLength={6}
             />
           </label>
-          {pincodeVerifyError && (
+          {pincode && !isValidPincode(pincode) && (
             <div style={{ color: 'red', marginBottom: 8 }}>
-              {pincodeVerifyError.startsWith('You need to set up a scraper') ? (
-                <>
-                  {pincodeVerifyError}
-                  <a href="https://github.com/Gaurishh/amul-protein-products-notifier/blob/master/SETUP_CRONJOB.md" target="_blank" rel="noopener noreferrer" style={{ color: 'red', textDecoration: 'underline', marginRight: 6 }}>
-                    Setup Guide
-                  </a>
-                </>
-              ) : pincodeVerifyError}
+              Please enter a valid 6-digit pincode.
             </div>
           )}
-          <button
-            type="button"
-            onClick={handlePincodeVerify}
-            disabled={!isValidPincode(pincode) || pincodeVerifyLoading}
-            style={{
-              marginBottom: 12,
-              opacity: isValidPincode(pincode) && !pincodeVerifyLoading ? 1 : 0.5,
-              pointerEvents: isValidPincode(pincode) && !pincodeVerifyLoading ? 'auto' : 'none',
-              cursor: isValidPincode(pincode) && !pincodeVerifyLoading ? 'pointer' : 'not-allowed',
-              position: 'relative',
-            }}
-          >
-            {pincodeVerifyLoading ? <span className="spinner" style={{ width: 18, height: 18 }}></span> : 'Verify'}
-          </button>
+          <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+            {pincode && isValidPincode(pincode) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStep('products');
+                }}
+                style={{
+                  marginBottom: 12,
+                  opacity: 1,
+                  pointerEvents: 'auto',
+                  cursor: 'pointer',
+                  position: 'relative',
+                }}
+              >
+                Next
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={goToEmailPage}
+              style={{
+                marginBottom: 12,
+                background: '#4a5568',
+                color: '#fff',
+                opacity: 1,
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+                position: 'relative',
+              }}
+            >
+              Back
+            </button>
+          </div>
         </div>
       )}
       {!unsubscribeLoading && !editLoading && step === 'products' && (
         <div>
           <ProductSelector selectedProducts={products} onChange={handleProductSelect} />
-          <button onClick={handleSubscribe} style={{ marginTop: 10 }} disabled={loading}>
-            Subscribe
-          </button>
-          {loading && <span className="spinner" style={{ marginLeft: 10 }}></span>}
+          <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
+            <button onClick={handleSubscribe} disabled={loading}>
+              Subscribe
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep('pincode')}
+              style={{
+                background: '#4a5568',
+                color: '#fff',
+                opacity: 1,
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+                position: 'relative',
+              }}
+            >
+              Back
+            </button>
+            {loading && <span className="spinner" style={{ marginLeft: 10 }}></span>}
+          </div>
         </div>
       )}
       {!unsubscribeLoading && !editLoading && step === 'manage' && user && (
