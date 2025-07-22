@@ -1,5 +1,6 @@
-import { emailQueue } from '../services/emailQueue.js';
+import { emailQueue, enqueueEmailJobs } from '../services/emailQueue.js';
 import { sendBulkStockNotification, sendExpiryNotification } from '../services/emailService.js';
+import '../db.js';
 import http from 'http';
 
 // Dummy HTTP server for Render web service workaround
