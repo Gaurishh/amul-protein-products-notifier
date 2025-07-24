@@ -5,7 +5,7 @@ load_dotenv()
 
 # Backend API configuration
 # BACKEND_API_BASE = os.getenv('BACKEND_API_BASE', 'http://localhost:8000/api')
-BACKEND_API_BASE = os.getenv('BACKEND_API_BASE', 'https://amul-protein-products-notifier-backend.onrender.com/api')
+BACKEND_API_BASE = os.getenv('BACKEND_API_BASE', 'https://amul-protein-products-notifier-backend-5lyo.onrender.com/api')
 
 # Amul website configuration
 AMUL_URL = "https://shop.amul.com/en/browse/protein"
