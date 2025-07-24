@@ -55,7 +55,7 @@ def process_queue():
 
 app = FastAPI(lifespan=lifespan)
 
-@app.get("/scrape")
+@app.api_route("/scrape", methods=["GET", "HEAD"])
 def trigger_scrape():
     """
     Queue a scraping cycle for hardcoded pincodes.
@@ -63,7 +63,8 @@ def trigger_scrape():
     """
     global scraper
     if not scraper or not scraper.driver:
-        return {"success": False, "message": "Scraper or driver not initialized."}
+        logging.error("Scraper or driver not initialized")
+        # return {"success": False, "message": "Scraper or driver not initialized."}
     
     # Hardcoded list of pincodes to scrape
     pincodes_to_scrape = [122003, 110036]
@@ -74,12 +75,14 @@ def trigger_scrape():
         job_status[job_id] = "queued"
         scrape_queue.put((job_id, pincode))
         job_ids.append({"pincode": pincode, "job_id": job_id})
+
+    logging.info(f"Queued {len(job_ids)} scraping jobs")
     
-    return {
-        "success": True,
-        "message": f"Scraping jobs queued for {len(job_ids)} pincodes.",
-        "jobs": job_ids
-    }
+    # return {
+    #     "success": True,
+    #     "message": f"Scraping jobs queued for {len(job_ids)} pincodes.",
+    #     "jobs": job_ids
+    # }
 
 @app.get("/scrape_status/{job_id}")
 def get_scrape_status(job_id: str):
