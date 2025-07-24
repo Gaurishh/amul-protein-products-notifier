@@ -1,4 +1,4 @@
-const API_BASE = 'https://amul-protein-products-notifier-backend-5lyo.onrender.com/api';
+const API_BASE = process.env.REACT_APP_BACKEND_API_BASE;
 // const API_BASE = 'http://localhost:8000/api';
 
 export async function checkUser(email) {
