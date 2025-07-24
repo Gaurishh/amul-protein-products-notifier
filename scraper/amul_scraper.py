@@ -16,19 +16,20 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 class AmulScraper:
-    def __init__(self, test_mode=False, pincode=None):
+    def __init__(self, test_mode=False, pincode=None, id=0):
         from config import PIN_CODE
         self.test_mode = test_mode
         self.driver = None
         self.session = requests.Session()
         self.pincode = pincode if pincode else PIN_CODE
+        self.id = id
         
     def setup_driver(self):
         """Set up Chrome WebDriver with appropriate options"""
         chrome_options = Options()
         if HEADLESS_MODE:
             chrome_options.add_argument("--headless=new")
-        logger.info(f"Headless mode: {HEADLESS_MODE}")
+        logger.info(f"Worker {self.id}: Headless mode: {HEADLESS_MODE}")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
@@ -39,24 +40,24 @@ class AmulScraper:
         
         try:
             self.driver = webdriver.Chrome(options=chrome_options)
-            logger.info("Chrome WebDriver initialized (system driver)")
+            logger.info(f"Worker {self.id}: Chrome WebDriver initialized (system driver)")
             # Log RAM usage of Chrome WebDriver
             try:
                 chrome_pid = self.driver.service.process.pid
                 p = psutil.Process(chrome_pid)
                 mem_mb = p.memory_info().rss / (1024 * 1024)
-                logger.info(f"Chrome WebDriver RAM usage: {mem_mb:.2f} MB (PID: {chrome_pid})")
+                logger.info(f"Worker {self.id}: Chrome WebDriver RAM usage: {mem_mb:.2f} MB (PID: {chrome_pid})")
             except Exception as e:
-                logger.warning(f"Could not log Chrome WebDriver RAM usage: {e}")
+                logger.warning(f"Worker {self.id}: Could not log Chrome WebDriver RAM usage: {e}")
         except Exception as e:
-            logger.error(f"Error initializing Chrome WebDriver: {e}")
+            logger.error(f"Worker {self.id}: Error initializing Chrome WebDriver: {e}")
             raise Exception("Could not initialize Chrome WebDriver. Please ensure Chrome is installed.")
 
     def enter_pincode(self):
         """Enter PIN code on the Amul website and select from dropdown"""
         try:
             if not self.driver:
-                logger.error("WebDriver is not initialized")
+                logger.error(f"Worker {self.id}: WebDriver is not initialized")
                 return False
             
             # Find the PIN input field robustly
@@ -72,7 +73,7 @@ class AmulScraper:
                 modal_open = False
                 try:
                     modal = self.driver.find_element(By.CSS_SELECTOR, "#locationWidgetModal.show")
-                    logger.info("Location modal is already open.")
+                    logger.info(f"Worker {self.id}: Location modal is already open.")
                     modal_open = True
                 except Exception:
                     modal_open = False
@@ -82,10 +83,10 @@ class AmulScraper:
                             EC.presence_of_element_located((By.CSS_SELECTOR, "div[role='button'].pincode_wrap"))
                         )
                         location_button.click()
-                        logger.info("Clicked location button to open PIN code modal.")
+                        logger.info(f"Worker {self.id}: Clicked location button to open PIN code modal.")
                         time.sleep(1)
                     except Exception as e:
-                        logger.error(f"Could not find or click location button: {e}")
+                        logger.error(f"Worker {self.id}: Could not find or click location button: {e}")
                         return False
                 # Now wait for the input to become visible
                 try:
@@ -93,7 +94,7 @@ class AmulScraper:
                         EC.visibility_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Pincode']"))
                     )
                 except Exception as e:
-                    logger.error(f"Could not find PIN input after opening modal: {e}")
+                    logger.error(f"Worker {self.id}: Could not find PIN input after opening modal: {e}")
                     return False
             pin_input.clear()
             pin_input.send_keys(self.pincode)
@@ -105,19 +106,19 @@ class AmulScraper:
                 dropdown_item = WebDriverWait(self.driver, 15).until(
                     EC.presence_of_element_located((By.XPATH, f"//*[text()='{self.pincode}']"))
                 )
-                logger.info("Dropdown item found, attempting to click...")
+                logger.info(f"Worker {self.id}: Dropdown item found, attempting to click...")
                 # Try normal click
                 try:
                     dropdown_item.click()
                 except Exception as e:
-                    logger.warning(f"Normal click failed: {e}, trying JS click...")
+                    logger.warning(f"Worker {self.id}: Normal click failed: {e}, trying JS click...")
                     if self.driver:
                         self.driver.execute_script("arguments[0].click();", dropdown_item)
-                logger.info(f"Selected PIN code from dropdown: {self.pincode}")
+                logger.info(f"Worker {self.id}: Selected PIN code from dropdown: {self.pincode}")
             except Exception as e:
-                logger.error(f"Dropdown with PIN code not found: {e}")
+                logger.error(f"Worker {self.id}: Dropdown with PIN code not found: {e}")
                 if self.driver:
-                    logger.error(self.driver.page_source)  # Log page source for debugging
+                    logger.error(f"Worker {self.id}: {self.driver.page_source}")  # Log page source for debugging
                 return False
 
             # Wait for the modal to disappear (input to become stale or invisible)
@@ -125,25 +126,25 @@ class AmulScraper:
                 WebDriverWait(self.driver, 10).until(
                     EC.invisibility_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Pincode']"))
                 )
-                logger.info("PIN modal closed.")
+                logger.info(f"Worker {self.id}: PIN modal closed.")
             except Exception:
-                logger.warning("PIN modal did not close after selection.")
+                logger.warning(f"Worker {self.id}: PIN modal did not close after selection.")
 
             # Wait for products to load
             time.sleep(5)
             return True
 
         except Exception as e:
-            logger.error(f"Error entering PIN code: {e}")
+            logger.error(f"Worker {self.id}: Error entering PIN code: {e}")
             if self.driver:
-                logger.error(self.driver.page_source)  # Log page source for debugging
+                logger.error(f"Worker {self.id}: {self.driver.page_source}")  # Log page source for debugging
             return False
             
     def scrape_products(self):
         """Scrape all products and their stock status"""
         try:
             if not self.driver:
-                logger.error("WebDriver is not initialized.")
+                logger.error(f"Worker {self.id}: WebDriver is not initialized.")
                 return []
                 
             # Wait for product cards to load
@@ -151,9 +152,9 @@ class AmulScraper:
                 WebDriverWait(self.driver, 15).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, ".product-grid-item"))
                 )
-                logger.info("Product grid items found")
+                logger.info(f"Worker {self.id}: Product grid items found")
             except Exception as e:
-                logger.error(f"Product grid items not found: {e}")
+                logger.error(f"Worker {self.id}: Product grid items not found: {e}")
                 return []
                 
             soup = BeautifulSoup(self.driver.page_source, 'html.parser')
@@ -161,7 +162,7 @@ class AmulScraper:
             product_elements = soup.select(".product-grid-item")
             
             if not product_elements:
-                logger.warning("No products found with .product-grid-item selector")
+                logger.warning(f"Worker {self.id}: No products found with .product-grid-item selector")
                 return []
                 
             for element in product_elements:
@@ -219,14 +220,14 @@ class AmulScraper:
                     products.append(product)
                     
                 except Exception as e:
-                    logger.error(f"Error processing product element: {e}")
+                    logger.error(f"Worker {self.id}: Error processing product element: {e}")
                     continue
             
-            logger.info(f"Successfully scraped {len(products)} products")
+            logger.info(f"Worker {self.id}: Successfully scraped {len(products)} products")
             return products
             
         except Exception as e:
-            logger.error(f"Error scraping products: {e}")
+            logger.error(f"Worker {self.id}: Error scraping products: {e}")
             return []
             
     def send_stock_changes_to_backend(self, products):
@@ -248,16 +249,16 @@ class AmulScraper:
 
                 if response.status_code == 200:
                     result = response.json()
-                    logger.info(f"Successfully sent {len(products)} products to backend")
+                    logger.info(f"Worker {self.id}: Successfully sent {len(products)} products to backend")
                     if result.get('success'):
-                        logger.info("Backend processed successfully.")
+                        logger.info(f"Worker {self.id}: Backend processed successfully.")
                     else:
-                        logger.warning("Backend did not report success.")
+                        logger.warning(f"Worker {self.id}: Backend did not report success.")
                     return True
                 else:
-                    logger.error(f"Failed to send data to backend: {response.status_code}")
+                    logger.error(f"Worker {self.id}: Failed to send data to backend: {response.status_code}")
             except Exception as e:
-                logger.error(f"Error sending data to backend (attempt {attempt+1}): {e}")
+                logger.error(f"Worker {self.id}: Error sending data to backend (attempt {attempt+1}): {e}")
             if attempt < max_retries - 1:
                 time.sleep(delay)
         return False
@@ -266,39 +267,39 @@ class AmulScraper:
         """Run one complete scraping cycle"""
         try:
             if not self.driver:
-                logger.error("WebDriver is not initialized.")
+                logger.error(f"Worker {self.id}: WebDriver is not initialized.")
                 return
-            logger.info("Starting scraping cycle")
+            logger.info(f"Worker {self.id}: Starting scraping cycle")
             
             # Navigate to the page only if not already there
             if self.driver.current_url != AMUL_URL:
                 self.driver.get(AMUL_URL)
-                logger.info(f"Navigated to {AMUL_URL}")
+                logger.info(f"Worker {self.id}: Navigated to {AMUL_URL}")
             
             # Wait for page to load
             time.sleep(3)
 
             # Only enter PIN code on the first cycle
-            logger.info("Entering PIN code...")
+            logger.info(f"Worker {self.id}: Entering PIN code...")
             if not self.enter_pincode():
-                logger.error("Failed to enter PIN code")
+                logger.error(f"Worker {self.id}: Failed to enter PIN code")
                 return
             
             try:
                 WebDriverWait(self.driver, 15).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, ".product-grid-item"))
                 )
-                logger.info("Products loaded successfully")
+                logger.info(f"Worker {self.id}: Products loaded successfully")
             except Exception as e:
-                logger.warning(f"Products did not load after refresh: {e}")
+                logger.warning(f"Worker {self.id}: Products did not load after refresh: {e}")
                 self.driver.refresh()
                 time.sleep(5)
 
             # Scrape products
-            logger.info("Starting to scrape products...")
+            logger.info(f"Worker {self.id}: Starting to scrape products...")
             products = self.scrape_products()
             if not products:
-                logger.warning("No products found")
+                logger.warning(f"Worker {self.id}: No products found")
                 return
 
             # === RESTOCK SIMULATION FOR TESTING ===
@@ -309,26 +310,26 @@ class AmulScraper:
             #     logger.info(f"[TEST] Forced restock for product: {products[1]['name']} ({products[1]['productId']})")
             # === END RESTOCK SIMULATION ===
 
-            logger.info(f"Successfully scraped {len(products)} products")
+            logger.info(f"Worker {self.id}: Successfully scraped {len(products)} products")
                 
             # Send data to backend for processing
-            logger.info("Sending data to backend...")
+            logger.info(f"Worker {self.id}: Sending data to backend...")
             self.send_stock_changes_to_backend(products)
             
-            logger.info("Scraping cycle completed successfully")
+            logger.info(f"Worker {self.id}: Scraping cycle completed successfully")
             # Log RAM usage of Chrome WebDriver after scraping cycle
             try:
                 chrome_pid = self.driver.service.process.pid
                 p = psutil.Process(chrome_pid)
                 mem_mb = p.memory_info().rss / (1024 * 1024)
-                logger.info(f"Chrome WebDriver RAM usage after cycle: {mem_mb:.2f} MB (PID: {chrome_pid})")
+                logger.info(f"Worker {self.id}: Chrome WebDriver RAM usage after cycle: {mem_mb:.2f} MB (PID: {chrome_pid})")
             except Exception as e:
-                logger.warning(f"Could not log Chrome WebDriver RAM usage after cycle: {e}")
+                logger.warning(f"Worker {self.id}: Could not log Chrome WebDriver RAM usage after cycle: {e}")
 
         except Exception as e:
-            logger.error(f"Error in scraping cycle: {e}")
+            logger.error(f"Worker {self.id}: Error in scraping cycle: {e}")
             import traceback
-            logger.error(f"Full traceback: {traceback.format_exc()}")
+            logger.error(f"Worker {self.id}: Full traceback: {traceback.format_exc()}")
             
     def run_once(self):
         """Run scraper once for testing"""
@@ -338,7 +339,7 @@ class AmulScraper:
         finally:
             if self.driver:
                 self.driver.quit()
-                logger.info("WebDriver closed")
+                logger.info(f"Worker {self.id}: WebDriver closed")
 
 if __name__ == "__main__":
     scraper = AmulScraper(test_mode=False)
