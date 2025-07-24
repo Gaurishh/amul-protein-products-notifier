@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+
+
 // Create transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -12,7 +14,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export async function sendBulkStockNotification(subscriber, products, pincode) {
+export async function sendBulkStockNotification(subscriber, products, pincode, token) {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       console.warn("Email credentials not configured. Skipping email notification.");
@@ -20,8 +22,8 @@ export async function sendBulkStockNotification(subscriber, products, pincode) {
     }
 
     const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL;
-    const unsubscribeLink = `${FRONTEND_BASE_URL}/unsubscribe?email=${encodeURIComponent(subscriber)}`;
-    const editSubscriptionLink = `${FRONTEND_BASE_URL}/edit-subscription?email=${encodeURIComponent(subscriber)}`;
+    const unsubscribeLink = `${FRONTEND_BASE_URL}/unsubscribe?token=${encodeURIComponent(token)}`;
+    const editSubscriptionLink = `${FRONTEND_BASE_URL}/edit-subscription?token=${encodeURIComponent(token)}`;
 
     // Create product list HTML
     const productLines = products.map(product => {
@@ -29,7 +31,7 @@ export async function sendBulkStockNotification(subscriber, products, pincode) {
       return `<li><a href="${productUrl}">${product.name}</a></li>`;
     }).join('');
 
-    const subject = products.length === 1 
+    const subject = products.length === 1
       ? `🎉 ${products[0].name} is back in stock!`
       : `🎉 ${products.length} products are back in stock!`;
 
@@ -77,7 +79,7 @@ export async function sendBulkStockNotification(subscriber, products, pincode) {
   }
 }
 
-export async function sendSubscriptionConfirmation(email, productIds, pincode) {
+export async function sendSubscriptionConfirmation(email, productIds, pincode, token) {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       console.warn("Email credentials not configured. Skipping confirmation email.");
@@ -85,8 +87,8 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode) {
     }
 
     const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL;
-    const unsubscribeLink = `${FRONTEND_BASE_URL}/unsubscribe?email=${encodeURIComponent(email)}`;
-    const editSubscriptionLink = `${FRONTEND_BASE_URL}/edit-subscription?email=${encodeURIComponent(email)}`;
+    const unsubscribeLink = `${FRONTEND_BASE_URL}/unsubscribe?token=${encodeURIComponent(token)}`;
+    const editSubscriptionLink = `${FRONTEND_BASE_URL}/edit-subscription?token=${encodeURIComponent(token)}`;
 
     const subject = 'Subscription Confirmed - Amul Protein Products Restock Notifier';
 
@@ -131,7 +133,7 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode) {
     console.error(`Failed to send confirmation email to ${email}:`, error);
     return false;
   }
-} 
+}
 
 export async function sendExpiryNotification(email, pincode) {
   try {
