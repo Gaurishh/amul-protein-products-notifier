@@ -44,7 +44,7 @@ def process_queue_worker(worker_id):
             job_status[job_id] = "in_progress"
             try:
                 scraper.pincode = pincode
-                scraper.run_scrape_cycle()
+                scraper.run_scrape_cycle_and_cleanup()
                 job_status[job_id] = "completed"
             except Exception as e:
                 job_status[job_id] = f"failed: {str(e)}"
