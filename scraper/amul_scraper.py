@@ -26,7 +26,8 @@ class AmulScraper:
         self.session = requests.Session()
         self.pincode = pincode if pincode else PIN_CODE
         self.id = id
-        self.temp_dir = tempfile.mkdtemp(prefix=f"chrome_worker_{self.id}_")  # Create once in __init__
+        timestamp = int(time.time() * 1000)
+        self.temp_dir = tempfile.mkdtemp(prefix=f"chrome_worker_{self.id}_{timestamp}_")  # Create once in __init__
         
     def setup_driver(self):
         """Set up Chrome WebDriver with appropriate options"""

@@ -11,6 +11,7 @@ from config import MONGO_URI
 import psutil
 import time
 import os
+import shutil
 
 scraper = None
 scrape_queue = Queue()
