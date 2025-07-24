@@ -45,3 +45,16 @@ export async function verifyPincode(pincode) {
   });
   return res.json();
 }
+
+export async function checkUserByToken(token) {
+  const res = await fetch(`${API_BASE}/user-by-token?token=${encodeURIComponent(token)}`);
+  if (res.status === 404) return null;
+  return res.json();
+}
+
+export async function unsubscribeUserByToken(token) {
+  const res = await fetch(`${API_BASE}/unsubscribe?token=${encodeURIComponent(token)}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}

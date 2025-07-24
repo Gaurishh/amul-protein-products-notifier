@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import EmailForm from '../components/EmailForm';
 import ProductSelector from '../components/ProductSelector';
 import SubscriptionManager from '../components/SubscriptionManager';
-import { checkUser, subscribeUser, unsubscribeUser, verifyPincode, trackPincode } from '../api';
+import { checkUser, subscribeUser, unsubscribeUser, verifyPincode, trackPincode, checkUserByToken, unsubscribeUserByToken } from '../api';
 import { useLocation } from 'react-router-dom';
 
 function useQuery() {
@@ -23,15 +23,14 @@ function HomePage({ unsubscribeMode, editMode }) {
   const [editLoading, setEditLoading] = useState(false);
   const query = useQuery();
 
-  // Auto-unsubscribe if in unsubscribeMode and email param is present
+  // Auto-unsubscribe if in unsubscribeMode and token param is present
   useEffect(() => {
     if (unsubscribeMode) {
-      const emailParam = query.get('email');
-      if (emailParam) {
-        setEmail(emailParam);
+      const tokenParam = query.get('token');
+      if (tokenParam) {
         setUnsubscribeLoading(true);
         (async () => {
-          await unsubscribeUser(emailParam);
+          await unsubscribeUserByToken(tokenParam);
           setMessage('You have been unsubscribed. You will no longer receive notifications.');
           setStep('unsubscribed');
           setUnsubscribeLoading(false);
@@ -42,19 +41,18 @@ function HomePage({ unsubscribeMode, editMode }) {
 
   useEffect(() => {
     if (editMode) {
-      const emailParam = query.get('email');
-      if (emailParam) {
-        setEmail(emailParam);
+      const tokenParam = query.get('token');
+      if (tokenParam) {
         setEditLoading(true);
         (async () => {
-          const userData = await checkUser(emailParam);
+          const userData = await checkUserByToken(tokenParam);
           if (userData) {
             setUser(userData);
             setStep('manage');
             setForceEdit(true);
           } else {
             setStep('email');
-            setMessage('No subscription found for this email.');
+            setMessage('No subscription found for this link.');
           }
           setEditLoading(false);
         })();
