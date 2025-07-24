@@ -26,19 +26,10 @@ class AmulScraper:
         self.session = requests.Session()
         self.pincode = pincode if pincode else PIN_CODE
         self.id = id
-        self.temp_dir = None
+        self.temp_dir = tempfile.mkdtemp(prefix=f"chrome_worker_{self.id}_")  # Create once in __init__
         
     def setup_driver(self):
         """Set up Chrome WebDriver with appropriate options"""
-        # Create a new temp directory for each setup (in case of multiple calls)
-        if self.temp_dir and os.path.exists(self.temp_dir):
-            try:
-                shutil.rmtree(self.temp_dir)
-            except Exception as e:
-                logger.warning(f"Worker {self.id}: Could not clean old temp dir: {e}")
-        
-        self.temp_dir = tempfile.mkdtemp(prefix=f"chrome_worker_{self.id}_")
-        
         chrome_options = Options()
         if HEADLESS_MODE:
             chrome_options.add_argument("--headless=new")
@@ -354,20 +345,20 @@ class AmulScraper:
             import traceback
             logger.error(f"Worker {self.id}: Full traceback: {traceback.format_exc()}")
 
-    def run_scrape_cycle_and_cleanup(self):
-        try:
-            self.run_scrape_cycle()
-        finally:
-            if self.driver:
-                self.driver.quit()
-                logger.info(f"Worker {self.id}: WebDriver closed")
-            # Clean up temporary directory
-            if self.temp_dir and os.path.exists(self.temp_dir):
-                try:
-                    shutil.rmtree(self.temp_dir)
-                    logger.info(f"Worker {self.id}: Temporary directory cleaned up: {self.temp_dir}")
-                except Exception as e:
-                    logger.warning(f"Worker {self.id}: Error cleaning up temporary directory: {e}")
+    # def run_scrape_cycle_and_cleanup(self):
+    #     try:
+    #         self.run_scrape_cycle()
+    #     finally:
+    #         if self.driver:
+    #             self.driver.quit()
+    #             logger.info(f"Worker {self.id}: WebDriver closed")
+    #         # Clean up temporary directory
+    #         if self.temp_dir and os.path.exists(self.temp_dir):
+    #             try:
+    #                 shutil.rmtree(self.temp_dir)
+    #                 logger.info(f"Worker {self.id}: Temporary directory cleaned up: {self.temp_dir}")
+    #             except Exception as e:
+    #                 logger.warning(f"Worker {self.id}: Error cleaning up temporary directory: {e}")
     
     def run_once(self):
         """Run scraper once for testing"""
@@ -377,7 +368,10 @@ class AmulScraper:
         finally:
             if self.driver:
                 self.driver.quit()
-                logger.info(f"Worker {self.id}: WebDriver closed")
+                logger.info(f"Worker {self.id}: WebDriver closed")  # Add this line back
+            # Clean up temp directory only for testing
+            if self.temp_dir and os.path.exists(self.temp_dir):
+                shutil.rmtree(self.temp_dir)
 
 if __name__ == "__main__":
     scraper = AmulScraper(test_mode=False)

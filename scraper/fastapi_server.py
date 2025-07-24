@@ -10,6 +10,7 @@ from pymongo import MongoClient
 from config import MONGO_URI
 import psutil
 import time
+import os
 
 scraper = None
 scrape_queue = Queue()
@@ -34,6 +35,7 @@ def log_cpu_usage():
 
 def process_queue_worker(worker_id):
     scraper = AmulScraper(id=worker_id)
+    scraper.setup_driver()  # Set up driver ONCE at start
     try:
         while True:
             job = scrape_queue.get()
@@ -43,31 +45,19 @@ def process_queue_worker(worker_id):
             job_status[job_id] = "in_progress"
             try:
                 scraper.pincode = pincode
-                scraper.setup_driver()  # Set up fresh driver for each job
-                scraper.run_scrape_cycle_and_cleanup()  # This will close driver and cleanup
+                scraper.run_scrape_cycle()  # Use run_scrape_cycle (NOT run_scrape_cycle_and_cleanup)
                 job_status[job_id] = "completed"
             except Exception as e:
                 job_status[job_id] = f"failed: {str(e)}"
                 logging.error(f"Worker {worker_id}: Job {job_id} failed: {e}")
-                # Ensure cleanup even on failure
-                try:
-                    if scraper.driver:
-                        scraper.driver.quit()
-                    if scraper.temp_dir and os.path.exists(scraper.temp_dir):
-                        shutil.rmtree(scraper.temp_dir)
-                except Exception as cleanup_error:
-                    logging.error(f"Worker {worker_id}: Cleanup error: {cleanup_error}")
     except KeyboardInterrupt:
         logging.info(f"Worker {worker_id}: Shutting down...")
     finally:
-        # Final cleanup
-        try:
-            if scraper.driver:
-                scraper.driver.quit()
-            if scraper.temp_dir and os.path.exists(scraper.temp_dir):
-                shutil.rmtree(scraper.temp_dir)
-        except Exception as e:
-            logging.error(f"Worker {worker_id}: Final cleanup error: {e}")
+        # Cleanup only at the very end when worker shuts down
+        if scraper.driver:
+            scraper.driver.quit()
+        if scraper.temp_dir and os.path.exists(scraper.temp_dir):
+            shutil.rmtree(scraper.temp_dir)
 
 @asynccontextmanager
 async def lifespan(app):
