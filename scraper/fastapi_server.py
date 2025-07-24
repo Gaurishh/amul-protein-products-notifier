@@ -27,8 +27,9 @@ def log_cpu_usage():
     while True:
         # Only log if there is work in progress or in the queue
         active_jobs = any(status == 'in_progress' for status in job_status.values())
-        queue_not_empty = scrape_queue.qsize() > 0
-        if active_jobs or queue_not_empty:
+        # queue_not_empty = scrape_queue.qsize() > 0
+        # if active_jobs or queue_not_empty:
+        if active_jobs:
             cpu = p.cpu_percent(interval=1)
             logging.info(f"[CPU] Overall process CPU usage: {cpu:.2f}%")
         else:
