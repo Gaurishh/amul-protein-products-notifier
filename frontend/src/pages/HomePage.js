@@ -120,11 +120,6 @@ function HomePage({ unsubscribeMode, editMode }) {
     setPincode('');
   };
 
-  // Helper to validate pincode
-  const isValidPincode = (code) => {
-    return /^([1-9][0-9]{5})$/.test(code);
-  };
-
   return (
     <div className="app-container">
       <div className="logo-title-row">
@@ -153,27 +148,19 @@ function HomePage({ unsubscribeMode, editMode }) {
       {!unsubscribeLoading && !editLoading && step === 'pincode' && (
         <div>
           <label>
-            Enter your pincode:
-            <input
-              type="text"
+            Select your pincode:
+            <select
               value={pincode}
-              required
-              pattern="\\d{6}"
-              title="Please enter a valid 6-digit pincode"
-              onChange={e => {
-                setPincode(e.target.value);
-              }}
-              style={{ marginTop: 8, marginBottom: 8, width: '100%' }}
-              maxLength={6}
-            />
+              onChange={e => setPincode(e.target.value)}
+              style={{ marginTop: 8, marginBottom: 8, width: '100%', padding: '8px' }}
+            >
+              <option value="">Choose a pincode</option>
+              <option value="122003">122003</option>
+              <option value="110036">110036</option>
+            </select>
           </label>
-          {pincode && !isValidPincode(pincode) && (
-            <div style={{ color: 'red', marginBottom: 8 }}>
-              Please enter a valid 6-digit pincode.
-            </div>
-          )}
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-            {pincode && isValidPincode(pincode) && (
+            {pincode && (
               <button
                 type="button"
                 onClick={() => {

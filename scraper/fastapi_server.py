@@ -55,7 +55,7 @@ def process_queue():
 
 app = FastAPI(lifespan=lifespan)
 
-@app.post("/scrape")
+@app.get("/scrape")
 def trigger_scrape():
     """
     Queue a scraping cycle for hardcoded pincodes.
