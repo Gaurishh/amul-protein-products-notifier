@@ -76,6 +76,7 @@ def trigger_scrape():
         job_ids.append({"pincode": pincode, "job_id": job_id})
 
     logging.info(f"Queued {len(job_ids)} scraping jobs")
+    logging.info(f"Current jobs in queue: {scrape_queue.qsize()}")
     
     # return {
     #     "success": True,
