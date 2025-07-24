@@ -66,7 +66,7 @@ def trigger_scrape():
         logging.error("Scraper or driver not initialized")
         # return {"success": False, "message": "Scraper or driver not initialized."}
     
-    pincodes_to_scrape = [110036, 122001, 122002, 122003, 122011, 122018]
+    pincodes_to_scrape = [110036, 122001, 122002, 122003, 122011, 122018, 122022]
     job_ids = []
     
     for pincode in pincodes_to_scrape:
