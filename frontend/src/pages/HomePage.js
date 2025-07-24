@@ -155,8 +155,12 @@ function HomePage({ unsubscribeMode, editMode }) {
               style={{ marginTop: 8, marginBottom: 8, width: '100%', padding: '8px' }}
             >
               <option value="">Choose a pincode</option>
-              <option value="122003">122003</option>
               <option value="110036">110036</option>
+              <option value="122001">122001</option>
+              <option value="122002">122002</option>
+              <option value="122003">122003</option>
+              <option value="122011">122011</option>
+              <option value="122018">122018</option>
             </select>
           </label>
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
