@@ -15,7 +15,7 @@ scraper = None
 scrape_queue = Queue()
 queue_lock = Lock()
 job_status = {}
-NUM_WORKERS = 3
+NUM_WORKERS = 2
 
 # MongoDB setup
 client = MongoClient(MONGO_URI)
