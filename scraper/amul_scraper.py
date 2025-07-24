@@ -26,10 +26,19 @@ class AmulScraper:
         self.session = requests.Session()
         self.pincode = pincode if pincode else PIN_CODE
         self.id = id
-        self.temp_dir = tempfile.mkdtemp(prefix=f"chrome_worker_{self.id}_")
+        self.temp_dir = None
         
     def setup_driver(self):
         """Set up Chrome WebDriver with appropriate options"""
+        # Create a new temp directory for each setup (in case of multiple calls)
+        if self.temp_dir and os.path.exists(self.temp_dir):
+            try:
+                shutil.rmtree(self.temp_dir)
+            except Exception as e:
+                logger.warning(f"Worker {self.id}: Could not clean old temp dir: {e}")
+        
+        self.temp_dir = tempfile.mkdtemp(prefix=f"chrome_worker_{self.id}_")
+        
         chrome_options = Options()
         if HEADLESS_MODE:
             chrome_options.add_argument("--headless=new")

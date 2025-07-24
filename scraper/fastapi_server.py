@@ -34,7 +34,6 @@ def log_cpu_usage():
 
 def process_queue_worker(worker_id):
     scraper = AmulScraper(id=worker_id)
-    scraper.setup_driver()
     try:
         while True:
             job = scrape_queue.get()
@@ -44,14 +43,31 @@ def process_queue_worker(worker_id):
             job_status[job_id] = "in_progress"
             try:
                 scraper.pincode = pincode
-                scraper.run_scrape_cycle_and_cleanup()
+                scraper.setup_driver()  # Set up fresh driver for each job
+                scraper.run_scrape_cycle_and_cleanup()  # This will close driver and cleanup
                 job_status[job_id] = "completed"
             except Exception as e:
                 job_status[job_id] = f"failed: {str(e)}"
-            scrape_queue.task_done()
+                logging.error(f"Worker {worker_id}: Job {job_id} failed: {e}")
+                # Ensure cleanup even on failure
+                try:
+                    if scraper.driver:
+                        scraper.driver.quit()
+                    if scraper.temp_dir and os.path.exists(scraper.temp_dir):
+                        shutil.rmtree(scraper.temp_dir)
+                except Exception as cleanup_error:
+                    logging.error(f"Worker {worker_id}: Cleanup error: {cleanup_error}")
+    except KeyboardInterrupt:
+        logging.info(f"Worker {worker_id}: Shutting down...")
     finally:
-        if scraper.driver:
-            scraper.driver.quit()
+        # Final cleanup
+        try:
+            if scraper.driver:
+                scraper.driver.quit()
+            if scraper.temp_dir and os.path.exists(scraper.temp_dir):
+                shutil.rmtree(scraper.temp_dir)
+        except Exception as e:
+            logging.error(f"Worker {worker_id}: Final cleanup error: {e}")
 
 @asynccontextmanager
 async def lifespan(app):
