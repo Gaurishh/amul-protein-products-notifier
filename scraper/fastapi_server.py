@@ -8,6 +8,7 @@ from queue import Queue
 import uuid
 from pymongo import MongoClient
 from config import MONGO_URI
+import psutil
 
 scraper = None
 scrape_queue = Queue()
@@ -16,6 +17,12 @@ job_status = {}
 
 # MongoDB setup
 client = MongoClient(MONGO_URI)
+
+def log_cpu_usage():
+    p = psutil.Process()
+    while True:
+        cpu = p.cpu_percent(interval=1)
+        logging.info(f"[CPU] Overall process CPU usage: {cpu:.2f}%")
 
 @asynccontextmanager
 async def lifespan(app):
@@ -27,6 +34,9 @@ async def lifespan(app):
     # Start the background worker thread
     worker_thread = Thread(target=process_queue, daemon=True)
     worker_thread.start()
+    # Start CPU logging thread
+    cpu_thread = Thread(target=log_cpu_usage, daemon=True)
+    cpu_thread.start()
     try:
         yield
     finally:
