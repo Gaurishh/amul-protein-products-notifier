@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
-    "worker": "node src/workers/emailWorker.js"
+    "dev": "nodemon src/app.js"
   },
   "dependencies": {
     "bull": "^4.0.0",
