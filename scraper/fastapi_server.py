@@ -35,8 +35,8 @@ async def lifespan(app):
     worker_thread = Thread(target=process_queue, daemon=True)
     worker_thread.start()
     # Start CPU logging thread
-    cpu_thread = Thread(target=log_cpu_usage, daemon=True)
-    cpu_thread.start()
+    # cpu_thread = Thread(target=log_cpu_usage, daemon=True)
+    # cpu_thread.start()
     try:
         yield
     finally:
