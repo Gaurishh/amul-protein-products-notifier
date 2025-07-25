@@ -12,6 +12,8 @@ import psutil
 import time
 import os
 import shutil
+import signal
+import glob
 
 scraper = None
 scrape_queue = Queue()
@@ -35,6 +37,21 @@ def log_cpu_usage():
         else:
             time.sleep(1)
 
+def cleanup_leftover_temp_dirs():
+    """Clean up any leftover Chrome temp directories from previous runs"""
+    try:
+        # Find and remove any leftover chrome_worker_* directories
+        temp_pattern = "/tmp/chrome_worker_*"
+        leftover_dirs = glob.glob(temp_pattern)
+        for temp_dir in leftover_dirs:
+            try:
+                shutil.rmtree(temp_dir)
+                logging.info(f"Cleaned up leftover temp directory: {temp_dir}")
+            except Exception as e:
+                logging.warning(f"Could not clean up {temp_dir}: {e}")
+    except Exception as e:
+        logging.warning(f"Error during temp directory cleanup: {e}")
+
 def process_queue_worker(worker_id):
     scraper = AmulScraper(id=worker_id)
     scraper.setup_driver()  # Set up driver ONCE at start
@@ -56,18 +73,31 @@ def process_queue_worker(worker_id):
         logging.info(f"Worker {worker_id}: Shutting down...")
     finally:
         # Cleanup only at the very end when worker shuts down
+        logging.info(f"Worker {worker_id}: Cleaning up Chrome WebDriver...")
         if scraper.driver:
-            scraper.driver.quit()
+            try:
+                scraper.driver.quit()
+                logging.info(f"Worker {worker_id}: Chrome WebDriver quit successfully")
+            except Exception as e:
+                logging.error(f"Worker {worker_id}: Error quitting Chrome WebDriver: {e}")
         if scraper.temp_dir and os.path.exists(scraper.temp_dir):
-            shutil.rmtree(scraper.temp_dir)
+            try:
+                shutil.rmtree(scraper.temp_dir)
+                logging.info(f"Worker {worker_id}: Temp directory cleaned up: {scraper.temp_dir}")
+            except Exception as e:
+                logging.error(f"Worker {worker_id}: Error cleaning temp directory: {e}")
 
 @asynccontextmanager
 async def lifespan(app):
     logging.basicConfig(level=logging.INFO)
-    # Start the background worker threads
+    
+    # Clean up any leftover temp directories from previous runs
+    cleanup_leftover_temp_dirs()
+    
+    # Start the background worker threads (NON-DAEMON for proper cleanup)
     workers = []
     for i in range(NUM_WORKERS):
-        t = Thread(target=process_queue_worker, args=(i+1,), daemon=True)
+        t = Thread(target=process_queue_worker, args=(i+1,), daemon=False)  # Changed to non-daemon
         t.start()
         workers.append(t)
     # Start CPU logging thread
@@ -76,11 +106,16 @@ async def lifespan(app):
     try:
         yield
     finally:
-        # Stop workers
+        logging.info("Shutting down workers...")
+        # Stop workers gracefully
         for _ in range(NUM_WORKERS):
             scrape_queue.put(None)
-        for t in workers:
-            t.join()
+        # Wait for all workers to finish cleanup
+        for i, t in enumerate(workers):
+            logging.info(f"Waiting for worker {i+1} to finish...")
+            t.join(timeout=5)  # Give each worker 5 seconds to cleanup
+            if t.is_alive():
+                logging.warning(f"Worker {i+1} did not finish cleanup in time")
         logging.info("All Chrome drivers shut down.")
 
 app = FastAPI(lifespan=lifespan)
