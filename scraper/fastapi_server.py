@@ -101,8 +101,8 @@ async def lifespan(app):
         t.start()
         workers.append(t)
     # Start CPU logging thread
-    cpu_thread = Thread(target=log_cpu_usage, daemon=True)
-    cpu_thread.start()
+    # cpu_thread = Thread(target=log_cpu_usage, daemon=True)
+    # cpu_thread.start()
     try:
         yield
     finally:
@@ -113,7 +113,7 @@ async def lifespan(app):
         # Wait for all workers to finish cleanup
         for i, t in enumerate(workers):
             logging.info(f"Waiting for worker {i+1} to finish...")
-            t.join(timeout=5)  # Give each worker 5 seconds to cleanup
+            t.join(timeout=15)  # Give each worker 5 seconds to cleanup
             if t.is_alive():
                 logging.warning(f"Worker {i+1} did not finish cleanup in time")
         logging.info("All Chrome drivers shut down.")
