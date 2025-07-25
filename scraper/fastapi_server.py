@@ -1,29 +1,31 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI
 from amul_scraper import AmulScraper
 import logging
 from contextlib import asynccontextmanager
-from pydantic import BaseModel
 from threading import Thread, Lock
 from queue import Queue
 import uuid
-from pymongo import MongoClient
-from config import MONGO_URI
+import time
+import requests
+from config import BACKEND_API_BASE
 import psutil
 
-scraper = None
+# Queues for staging jobs
 scrape_queue = Queue()
+backend_queue = Queue()
 queue_lock = Lock()
-job_status = {}
+job_status = {}  # job_id -> status
 
-# MongoDB setup
-client = MongoClient(MONGO_URI)
+scraper = None
 
+# CPU logging function (optional)
 def log_cpu_usage():
     p = psutil.Process()
     while True:
         cpu = p.cpu_percent(interval=1)
         logging.info(f"[CPU] Overall process CPU usage: {cpu:.2f}%")
 
+# Lifespan to initialize scraper and worker threads
 @asynccontextmanager
 async def lifespan(app):
     global scraper
@@ -31,75 +33,100 @@ async def lifespan(app):
     scraper = AmulScraper()
     scraper.setup_driver()
     logging.info("AmulScraper and Chrome driver initialized.")
-    # Start the background worker thread
-    worker_thread = Thread(target=process_queue, daemon=True)
-    worker_thread.start()
-    # Start CPU logging thread
-    # cpu_thread = Thread(target=log_cpu_usage, daemon=True)
-    # cpu_thread.start()
+
+    # Start worker threads
+    Thread(target=scrape_worker, daemon=True).start()
+    Thread(target=backend_worker, daemon=True).start()
+    # Thread(target=log_cpu_usage, daemon=True).start()
+
     try:
         yield
     finally:
+        # Signal shutdown
+        scrape_queue.put(None)
+        backend_queue.put(None)
         if scraper and scraper.driver:
             scraper.driver.quit()
-        logging.info("AmulScraper and Chrome driver shut down.")
+        logging.info("Shutdown complete.")
 
-def process_queue():
-    global scraper
+app = FastAPI(lifespan=lifespan)
+
+# Worker to process scraping jobs
+def scrape_worker():
     while True:
         job = scrape_queue.get()
         if job is None:
             break
         job_id, pincode = job
-        job_status[job_id] = "in_progress"
+        job_status[job_id] = "in_progress_scrape"
         try:
-            if scraper and scraper.driver:
-                scraper.pincode = pincode
-                scraper.run_scrape_cycle()
-                job_status[job_id] = "completed"
-            else:
-                job_status[job_id] = "failed: scraper or driver not initialized"
+            scraper.pincode = pincode
+            products = scraper.run_scrape_cycle()
+            job_status[job_id] = "scraped"
+            # Queue for backend sending
+            backend_queue.put((job_id, pincode, products))
         except Exception as e:
-            job_status[job_id] = f"failed: {str(e)}"
+            job_status[job_id] = f"failed_scrape: {e}"
         scrape_queue.task_done()
 
-app = FastAPI(lifespan=lifespan)
+# Worker to send scraped data to backend
+def backend_worker():
+    while True:
+        job = backend_queue.get()
+        if job is None:
+            break
+        job_id, pincode, products = job
+        job_status[job_id] = "in_progress_send"
+        success = _send_to_backend(pincode, products)
+        job_status[job_id] = "completed" if success else "failed_send"
+        backend_queue.task_done()
 
-@app.api_route("/scrape", methods=["GET", "HEAD"])
+# Extraction of send logic into function
+
+def _send_to_backend(pincode, products):
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(
+                f"{BACKEND_API_BASE}/stock-changes",
+                json={
+                    'products': products,
+                    'timestamp': time.time(),
+                    'scraper_id': 'amul-scraper-1',
+                    'pincode': pincode
+                },
+                headers={'Content-Type': 'application/json'}
+            )
+            if response.status_code == 200:
+                logging.info(f"Backend processed successfully for pincode {pincode}")
+                return True
+            else:
+                logging.error(f"Failed send, status {response.status_code}")
+        except Exception as e:
+            logging.error(f"Error sending to backend: {e}")
+        time.sleep(1)
+    return False
+
+# API endpoint to queue scrape jobs
+@app.get("/scrape")
 def trigger_scrape():
-    """
-    Queue a scraping cycle for hardcoded pincodes.
-    Returns a list of job IDs for status tracking.
-    """
-    global scraper
-    if not scraper or not scraper.driver:
-        logging.error("Scraper or driver not initialized")
-        # return {"success": False, "message": "Scraper or driver not initialized."}
-    
-    pincodes_to_scrape = [110036, 122001, 122002, 122003, 122011, 122018, 122022]
-    job_ids = []
-    
-    for pincode in pincodes_to_scrape:
+    pincodes = [110036, 122001, 122002, 122003, 122011, 122018, 122022]
+    jobs = []
+    for pin in pincodes:
         job_id = str(uuid.uuid4())
         job_status[job_id] = "queued"
-        scrape_queue.put((job_id, pincode))
-        job_ids.append({"pincode": pincode, "job_id": job_id})
+        scrape_queue.put((job_id, pin))
+        jobs.append({"job_id": job_id, "pincode": pin})
+    logging.info(f"Queued {len(jobs)} scrape jobs.")
+    return {"jobs": jobs}
 
-    logging.info(f"Queued {len(job_ids)} scraping jobs")
-    logging.info(f"Current jobs in queue: {scrape_queue.qsize()}")
-    
-    # return {
-    #     "success": True,
-    #     "message": f"Scraping jobs queued for {len(job_ids)} pincodes.",
-    #     "jobs": job_ids
-    # }
-
+# Endpoint to check job status
 @app.get("/scrape_status/{job_id}")
-def get_scrape_status(job_id: str):
+def get_status(job_id: str):
     status = job_status.get(job_id, "not_found")
     return {"job_id": job_id, "status": status}
 
-@app.api_route("/ping", methods=["GET", "HEAD"])
+# Simple ping
+@app.get("/ping")
 def ping():
-    logging.info("pong")
-    return {"message": "pong"} 
+    return {"message": "pong"}

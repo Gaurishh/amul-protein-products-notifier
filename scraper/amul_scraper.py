@@ -11,6 +11,7 @@ import logging
 from config import *
 from selenium.common.exceptions import ElementNotInteractableException, TimeoutException
 import psutil
+
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -40,14 +41,6 @@ class AmulScraper:
         try:
             self.driver = webdriver.Chrome(options=chrome_options)
             logger.info("Chrome WebDriver initialized (system driver)")
-            # Log RAM usage of Chrome WebDriver
-            try:
-                chrome_pid = self.driver.service.process.pid
-                p = psutil.Process(chrome_pid)
-                mem_mb = p.memory_info().rss / (1024 * 1024)
-                logger.info(f"Chrome WebDriver RAM usage: {mem_mb:.2f} MB (PID: {chrome_pid})")
-            except Exception as e:
-                logger.warning(f"Could not log Chrome WebDriver RAM usage: {e}")
         except Exception as e:
             logger.error(f"Error initializing Chrome WebDriver: {e}")
             raise Exception("Could not initialize Chrome WebDriver. Please ensure Chrome is installed.")
@@ -323,11 +316,11 @@ class AmulScraper:
                 time.sleep(5)
 
             # Scrape products
-            logger.info("Starting to scrape products...")
+            logger.info(f"Starting to scrape products for pincode {self.pincode}...")
             products = self.scrape_products()
             if not products:
                 logger.warning("No products found")
-                return
+                return []
 
             # === RESTOCK SIMULATION FOR TESTING ===
             # Force the first product to be in stock (simulate restock)
@@ -338,25 +331,20 @@ class AmulScraper:
             # === END RESTOCK SIMULATION ===
 
             logger.info(f"Successfully scraped {len(products)} products")
+
+            return products
                 
             # Send data to backend for processing
-            logger.info("Sending data to backend...")
-            self.send_stock_changes_to_backend(products)
+            # logger.info("Sending data to backend...")
+            # self.send_stock_changes_to_backend(products)
             
-            logger.info("Scraping cycle completed successfully")
-            # Log RAM usage of Chrome WebDriver after scraping cycle
-            try:
-                chrome_pid = self.driver.service.process.pid
-                p = psutil.Process(chrome_pid)
-                mem_mb = p.memory_info().rss / (1024 * 1024)
-                logger.info(f"Chrome WebDriver RAM usage after cycle: {mem_mb:.2f} MB (PID: {chrome_pid})")
-            except Exception as e:
-                logger.warning(f"Could not log Chrome WebDriver RAM usage after cycle: {e}")
+            # logger.info("Scraping cycle completed successfully")
 
         except Exception as e:
             logger.error(f"Error in scraping cycle: {e}")
             import traceback
             logger.error(f"Full traceback: {traceback.format_exc()}")
+            return []
             
     def run_once(self):
         """Run scraper once for testing"""
