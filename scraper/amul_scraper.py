@@ -37,6 +37,8 @@ class AmulScraper:
         if HEADLESS_MODE:
             chrome_options.add_argument("--headless=new")
         logger.info(f"Worker {self.id}: Headless mode: {HEADLESS_MODE}")
+        
+        # Basic Chrome options
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
@@ -45,31 +47,91 @@ class AmulScraper:
         chrome_options.add_argument("--disable-plugins")
         chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         
-        # Use unique user data directory for each worker to prevent conflicts
-        chrome_options.add_argument(f"--user-data-dir={self.temp_dir}")
+        # Diagnostic logging
+        logger.info(f"Worker {self.id}: Temp directory: {self.temp_dir}")
+        logger.info(f"Worker {self.id}: Temp directory exists: {os.path.exists(self.temp_dir)}")
+        logger.info(f"Worker {self.id}: Temp directory writable: {os.access(self.temp_dir, os.W_OK)}")
         
-        # Additional options for better stability on cloud platforms
-        chrome_options.add_argument("--disable-background-timer-throttling")
-        chrome_options.add_argument("--disable-backgrounding-occluded-windows")
-        chrome_options.add_argument("--disable-renderer-backgrounding")
-        chrome_options.add_argument("--disable-features=TranslateUI")
-        chrome_options.add_argument("--disable-ipc-flooding-protection")
-        
+        # Try different approaches for user data directory
         try:
+            # Approach 1: Use unique user data directory (current approach)
+            chrome_options.add_argument(f"--user-data-dir={self.temp_dir}")
+            
+            # Additional options for better stability on cloud platforms
+            chrome_options.add_argument("--disable-background-timer-throttling")
+            chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+            chrome_options.add_argument("--disable-renderer-backgrounding")
+            chrome_options.add_argument("--disable-features=TranslateUI")
+            chrome_options.add_argument("--disable-ipc-flooding-protection")
+            
+            # Additional Render-specific options
+            chrome_options.add_argument("--single-process")  # Force single process mode
+            chrome_options.add_argument("--no-zygote")       # Disable zygote process
+            chrome_options.add_argument("--disable-dev-shm-usage")  # Use disk instead of /dev/shm
+            
+            logger.info(f"Worker {self.id}: Attempting Chrome WebDriver initialization with user-data-dir...")
             self.driver = webdriver.Chrome(options=chrome_options)
-            logger.info(f"Worker {self.id}: Chrome WebDriver initialized (system driver) with temp dir: {self.temp_dir}")
-            # Log RAM usage of Chrome WebDriver
-            try:
-                chrome_pid = self.driver.service.process.pid
-                p = psutil.Process(chrome_pid)
-                mem_mb = p.memory_info().rss / (1024 * 1024)
-                logger.info(f"Worker {self.id}: Chrome WebDriver RAM usage: {mem_mb:.2f} MB (PID: {chrome_pid})")
-            except Exception as e:
-                logger.warning(f"Worker {self.id}: Could not log Chrome WebDriver RAM usage: {e}")
+            logger.info(f"Worker {self.id}: Chrome WebDriver initialized successfully with temp dir: {self.temp_dir}")
+            
         except Exception as e:
-            logger.error(f"Worker {self.id}: Error initializing Chrome WebDriver: {e}")
-            raise Exception("Could not initialize Chrome WebDriver. Please ensure Chrome is installed.")
-
+            logger.error(f"Worker {self.id}: Failed with user-data-dir approach: {e}")
+            
+            # Approach 2: Try without user-data-dir (fallback)
+            try:
+                logger.info(f"Worker {self.id}: Trying fallback approach without user-data-dir...")
+                chrome_options_fallback = Options()
+                if HEADLESS_MODE:
+                    chrome_options_fallback.add_argument("--headless=new")
+                
+                # Copy all options except user-data-dir
+                for arg in chrome_options.arguments:
+                    if not arg.startswith("--user-data-dir"):
+                        chrome_options_fallback.add_argument(arg)
+                
+                # Add memory-based options for fallback
+                chrome_options_fallback.add_argument("--memory-pressure-off")
+                chrome_options_fallback.add_argument("--max_old_space_size=4096")
+                
+                self.driver = webdriver.Chrome(options=chrome_options_fallback)
+                logger.info(f"Worker {self.id}: Chrome WebDriver initialized with fallback approach (no user-data-dir)")
+                
+            except Exception as e2:
+                logger.error(f"Worker {self.id}: Fallback approach also failed: {e2}")
+                
+                # Approach 3: Try with system temp directory
+                try:
+                    logger.info(f"Worker {self.id}: Trying system temp directory approach...")
+                    system_temp = tempfile.gettempdir()
+                    worker_temp = os.path.join(system_temp, f"chrome_worker_{self.id}_{str(uuid.uuid4())[:8]}")
+                    os.makedirs(worker_temp, exist_ok=True)
+                    
+                    chrome_options_system = Options()
+                    if HEADLESS_MODE:
+                        chrome_options_system.add_argument("--headless=new")
+                    chrome_options_system.add_argument("--no-sandbox")
+                    chrome_options_system.add_argument("--disable-dev-shm-usage")
+                    chrome_options_system.add_argument("--disable-gpu")
+                    chrome_options_system.add_argument(f"--user-data-dir={worker_temp}")
+                    
+                    self.driver = webdriver.Chrome(options=chrome_options_system)
+                    self.temp_dir = worker_temp  # Update temp_dir for cleanup
+                    logger.info(f"Worker {self.id}: Chrome WebDriver initialized with system temp dir: {worker_temp}")
+                    
+                except Exception as e3:
+                    logger.error(f"Worker {self.id}: All approaches failed. Last error: {e3}")
+                    logger.error(f"Worker {self.id}: Original error: {e}")
+                    logger.error(f"Worker {self.id}: Fallback error: {e2}")
+                    raise Exception("Could not initialize Chrome WebDriver. Please ensure Chrome is installed.")
+        
+        # Log RAM usage if successful
+        try:
+            chrome_pid = self.driver.service.process.pid
+            p = psutil.Process(chrome_pid)
+            mem_mb = p.memory_info().rss / (1024 * 1024)
+            logger.info(f"Worker {self.id}: Chrome WebDriver RAM usage: {mem_mb:.2f} MB (PID: {chrome_pid})")
+        except Exception as e:
+            logger.warning(f"Worker {self.id}: Could not log Chrome WebDriver RAM usage: {e}")
+            
     def enter_pincode(self):
         """Enter PIN code on the Amul website and select from dropdown"""
         try:
