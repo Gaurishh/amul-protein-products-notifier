@@ -5,12 +5,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.action_chains import ActionChains
 from bs4 import BeautifulSoup
 import logging
 from config import *
 from selenium.common.exceptions import ElementNotInteractableException, TimeoutException
 import psutil
-
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -110,10 +110,38 @@ class AmulScraper:
                 try:
                     dropdown_item.click()
                 except Exception as e:
-                    logger.warning(f"Normal click failed: {e}, trying JS click...")
-                    if self.driver:
-                        self.driver.execute_script("arguments[0].click();", dropdown_item)
-                logger.info(f"Selected PIN code from dropdown: {self.pincode}")
+                    logger.warning(f"Normal click failed: {e}")
+                    
+                    # Method 1: Scroll into view and retry
+                    try:
+                        logger.info("Trying scroll into view + click...")
+                        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", dropdown_item)
+                        time.sleep(0.3)
+                        dropdown_item.click()
+                        logger.info("Scroll + click succeeded")
+                    except Exception as e2:
+                        logger.warning(f"Scroll + click failed: {e2}")
+                        
+                        # Method 2: ActionChains
+                        try:
+                            logger.info("Trying ActionChains click...")
+                            actions = ActionChains(self.driver)
+                            actions.move_to_element(dropdown_item).click().perform()
+                            logger.info("ActionChains click succeeded")
+                        except Exception as e3:
+                            logger.warning(f"ActionChains failed: {e3}")
+                            
+                            # Method 3: Wait for clickable and retry
+                            try:
+                                logger.info("Waiting for element to be clickable...")
+                                clickable_item = WebDriverWait(self.driver, 5).until(
+                                    EC.element_to_be_clickable((By.XPATH, f"//*[text()='{self.pincode}']"))
+                                )
+                                clickable_item.click()
+                                logger.info("Clickable wait + click succeeded")
+                            except Exception as e4:
+                                logger.error(f"All click methods failed. Last error: {e4}")
+                                return False
             except Exception as e:
                 logger.error(f"Dropdown with PIN code not found: {e}")
                 if self.driver:
