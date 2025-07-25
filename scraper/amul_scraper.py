@@ -28,7 +28,7 @@ class AmulScraper:
         self.id = id
         timestamp = int(time.time() * 1000)
         unique_id = str(uuid.uuid4())[:8]  # Short unique ID
-self.temp_dir = tempfile.mkdtemp(prefix=f"chrome_worker_{self.id}_{unique_id}_")
+        self.temp_dir = tempfile.mkdtemp(prefix=f"chrome_worker_{self.id}_{unique_id}_")
         
     def setup_driver(self):
         """Set up Chrome WebDriver with appropriate options"""
