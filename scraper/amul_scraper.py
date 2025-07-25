@@ -19,6 +19,24 @@ import uuid
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+def kill_chrome_processes():
+    """Kill any lingering Chrome processes that might be causing conflicts"""
+    try:
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if proc.info['name'] and 'chrome' in proc.info['name'].lower():
+                    # Check if it's a Chrome process with our temp directory pattern
+                    cmdline = proc.info['cmdline'] or []
+                    cmdline_str = ' '.join(cmdline)
+                    if 'chrome_worker_' in cmdline_str or '--user-data-dir' in cmdline_str:
+                        logger.info(f"Killing lingering Chrome process: PID {proc.info['pid']}")
+                        proc.kill()
+                        proc.wait(timeout=3)
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):
+                continue
+    except Exception as e:
+        logger.warning(f"Error during Chrome process cleanup: {e}")
+
 class AmulScraper:
     def __init__(self, test_mode=False, pincode=None, id=0):
         from config import PIN_CODE
@@ -32,96 +50,103 @@ class AmulScraper:
         self.temp_dir = tempfile.mkdtemp(prefix=f"chrome_worker_{self.id}_{unique_id}_")
         
     def setup_driver(self):
-        """Set up Chrome WebDriver with appropriate options"""
-        chrome_options = Options()
-        if HEADLESS_MODE:
-            chrome_options.add_argument("--headless=new")
-        logger.info(f"Worker {self.id}: Headless mode: {HEADLESS_MODE}")
+        """Set up Chrome WebDriver with appropriate options and retry logic"""
+        # Kill any lingering Chrome processes first
+        kill_chrome_processes()
         
-        # Basic Chrome options
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--disable-plugins")
-        chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        max_retries = 3
+        base_delay = 2  # seconds
         
-        # Diagnostic logging
-        logger.info(f"Worker {self.id}: Temp directory: {self.temp_dir}")
-        logger.info(f"Worker {self.id}: Temp directory exists: {os.path.exists(self.temp_dir)}")
-        logger.info(f"Worker {self.id}: Temp directory writable: {os.access(self.temp_dir, os.W_OK)}")
-        
-        # Try different approaches for user data directory
-        try:
-            # Approach 1: Use unique user data directory (current approach)
-            chrome_options.add_argument(f"--user-data-dir={self.temp_dir}")
-            
-            # Additional options for better stability on cloud platforms
-            chrome_options.add_argument("--disable-background-timer-throttling")
-            chrome_options.add_argument("--disable-backgrounding-occluded-windows")
-            chrome_options.add_argument("--disable-renderer-backgrounding")
-            chrome_options.add_argument("--disable-features=TranslateUI")
-            chrome_options.add_argument("--disable-ipc-flooding-protection")
-            
-            # Additional Render-specific options
-            chrome_options.add_argument("--single-process")  # Force single process mode
-            chrome_options.add_argument("--no-zygote")       # Disable zygote process
-            chrome_options.add_argument("--disable-dev-shm-usage")  # Use disk instead of /dev/shm
-            
-            logger.info(f"Worker {self.id}: Attempting Chrome WebDriver initialization with user-data-dir...")
-            self.driver = webdriver.Chrome(options=chrome_options)
-            logger.info(f"Worker {self.id}: Chrome WebDriver initialized successfully with temp dir: {self.temp_dir}")
-            
-        except Exception as e:
-            logger.error(f"Worker {self.id}: Failed with user-data-dir approach: {e}")
-            
-            # Approach 2: Try without user-data-dir (fallback)
+        for attempt in range(max_retries):
             try:
-                logger.info(f"Worker {self.id}: Trying fallback approach without user-data-dir...")
-                chrome_options_fallback = Options()
+                if attempt > 0:
+                    # Exponential backoff with jitter
+                    delay = base_delay * (2 ** (attempt - 1)) + (time.time() % 1)
+                    logger.info(f"Worker {self.id}: Retrying WebDriver setup in {delay:.1f} seconds (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(delay)
+                    
+                    # Create a new temp directory for retry
+                    if os.path.exists(self.temp_dir):
+                        shutil.rmtree(self.temp_dir, ignore_errors=True)
+                    unique_id = str(uuid.uuid4())[:8]
+                    self.temp_dir = tempfile.mkdtemp(prefix=f"chrome_worker_{self.id}_{unique_id}_retry{attempt}_")
+                
+                chrome_options = Options()
                 if HEADLESS_MODE:
-                    chrome_options_fallback.add_argument("--headless=new")
+                    chrome_options.add_argument("--headless=new")
+                logger.info(f"Worker {self.id}: Headless mode: {HEADLESS_MODE}")
                 
-                # Copy all options except user-data-dir
-                for arg in chrome_options.arguments:
-                    if not arg.startswith("--user-data-dir"):
-                        chrome_options_fallback.add_argument(arg)
+                # Basic Chrome options
+                chrome_options.add_argument("--no-sandbox")
+                chrome_options.add_argument("--disable-dev-shm-usage")
+                chrome_options.add_argument("--disable-gpu")
+                chrome_options.add_argument("--window-size=1920,1080")
+                chrome_options.add_argument("--disable-extensions")
+                chrome_options.add_argument("--disable-plugins")
+                chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                 
-                # Add memory-based options for fallback
-                chrome_options_fallback.add_argument("--memory-pressure-off")
-                chrome_options_fallback.add_argument("--max_old_space_size=4096")
+                # Diagnostic logging
+                logger.info(f"Worker {self.id}: Temp directory: {self.temp_dir}")
+                logger.info(f"Worker {self.id}: Temp directory exists: {os.path.exists(self.temp_dir)}")
+                logger.info(f"Worker {self.id}: Temp directory writable: {os.access(self.temp_dir, os.W_OK)}")
                 
-                self.driver = webdriver.Chrome(options=chrome_options_fallback)
-                logger.info(f"Worker {self.id}: Chrome WebDriver initialized with fallback approach (no user-data-dir)")
+                # Use unique user data directory with additional isolation
+                chrome_options.add_argument(f"--user-data-dir={self.temp_dir}")
+                chrome_options.add_argument(f"--crash-dumps-dir={self.temp_dir}/crashes")
+                chrome_options.add_argument(f"--disk-cache-dir={self.temp_dir}/cache")
                 
-            except Exception as e2:
-                logger.error(f"Worker {self.id}: Fallback approach also failed: {e2}")
+                # Additional options for better stability on cloud platforms
+                chrome_options.add_argument("--disable-background-timer-throttling")
+                chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+                chrome_options.add_argument("--disable-renderer-backgrounding")
+                chrome_options.add_argument("--disable-features=TranslateUI")
+                chrome_options.add_argument("--disable-ipc-flooding-protection")
                 
-                # Approach 3: Try with system temp directory
-                try:
-                    logger.info(f"Worker {self.id}: Trying system temp directory approach...")
-                    system_temp = tempfile.gettempdir()
-                    worker_temp = os.path.join(system_temp, f"chrome_worker_{self.id}_{str(uuid.uuid4())[:8]}")
-                    os.makedirs(worker_temp, exist_ok=True)
-                    
-                    chrome_options_system = Options()
-                    if HEADLESS_MODE:
-                        chrome_options_system.add_argument("--headless=new")
-                    chrome_options_system.add_argument("--no-sandbox")
-                    chrome_options_system.add_argument("--disable-dev-shm-usage")
-                    chrome_options_system.add_argument("--disable-gpu")
-                    chrome_options_system.add_argument(f"--user-data-dir={worker_temp}")
-                    
-                    self.driver = webdriver.Chrome(options=chrome_options_system)
-                    self.temp_dir = worker_temp  # Update temp_dir for cleanup
-                    logger.info(f"Worker {self.id}: Chrome WebDriver initialized with system temp dir: {worker_temp}")
-                    
-                except Exception as e3:
-                    logger.error(f"Worker {self.id}: All approaches failed. Last error: {e3}")
-                    logger.error(f"Worker {self.id}: Original error: {e}")
-                    logger.error(f"Worker {self.id}: Fallback error: {e2}")
-                    raise Exception("Could not initialize Chrome WebDriver. Please ensure Chrome is installed.")
+                # Additional Render-specific options
+                chrome_options.add_argument("--single-process")  # Force single process mode
+                chrome_options.add_argument("--no-zygote")       # Disable zygote process
+                chrome_options.add_argument("--disable-dev-shm-usage")  # Use disk instead of /dev/shm
+                
+                # Add more isolation options
+                chrome_options.add_argument("--disable-web-security")
+                chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+                chrome_options.add_argument("--disable-logging")
+                chrome_options.add_argument("--silent")
+                chrome_options.add_argument("--no-first-run")
+                chrome_options.add_argument("--no-default-browser-check")
+                
+                logger.info(f"Worker {self.id}: Attempting Chrome WebDriver initialization (attempt {attempt + 1})...")
+                self.driver = webdriver.Chrome(options=chrome_options)
+                logger.info(f"Worker {self.id}: Chrome WebDriver initialized successfully with temp dir: {self.temp_dir}")
+                break  # Success, exit retry loop
+                
+            except Exception as e:
+                logger.error(f"Worker {self.id}: WebDriver initialization failed (attempt {attempt + 1}): {e}")
+                
+                if attempt == max_retries - 1:
+                    # Last attempt failed, try fallback without user-data-dir
+                    logger.info(f"Worker {self.id}: All retry attempts failed, trying fallback without user-data-dir...")
+                    try:
+                        chrome_options_fallback = Options()
+                        if HEADLESS_MODE:
+                            chrome_options_fallback.add_argument("--headless=new")
+                        
+                        # Minimal options for fallback
+                        chrome_options_fallback.add_argument("--no-sandbox")
+                        chrome_options_fallback.add_argument("--disable-dev-shm-usage")
+                        chrome_options_fallback.add_argument("--disable-gpu")
+                        chrome_options_fallback.add_argument("--single-process")
+                        chrome_options_fallback.add_argument("--no-zygote")
+                        chrome_options_fallback.add_argument("--disable-web-security")
+                        chrome_options_fallback.add_argument("--no-first-run")
+                        
+                        self.driver = webdriver.Chrome(options=chrome_options_fallback)
+                        logger.info(f"Worker {self.id}: Chrome WebDriver initialized with fallback approach (no user-data-dir)")
+                        break
+                        
+                    except Exception as fallback_error:
+                        logger.error(f"Worker {self.id}: Fallback approach also failed: {fallback_error}")
+                        raise Exception(f"Could not initialize Chrome WebDriver after {max_retries} attempts. Last error: {e}")
         
         # Log RAM usage if successful
         try:

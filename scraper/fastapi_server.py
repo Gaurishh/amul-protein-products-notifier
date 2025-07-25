@@ -78,6 +78,8 @@ def process_queue_worker(worker_id):
             try:
                 scraper.driver.quit()
                 logging.info(f"Worker {worker_id}: Chrome WebDriver quit successfully")
+                # Give Chrome time to fully terminate
+                time.sleep(2)
             except Exception as e:
                 logging.error(f"Worker {worker_id}: Error quitting Chrome WebDriver: {e}")
         if scraper.temp_dir and os.path.exists(scraper.temp_dir):
@@ -94,12 +96,18 @@ async def lifespan(app):
     # Clean up any leftover temp directories from previous runs
     cleanup_leftover_temp_dirs()
     
+    # Add delay to ensure cleanup is complete
+    time.sleep(3)
+    
     # Start the background worker threads (NON-DAEMON for proper cleanup)
     workers = []
     for i in range(NUM_WORKERS):
         t = Thread(target=process_queue_worker, args=(i+1,), daemon=False)  # Changed to non-daemon
         t.start()
         workers.append(t)
+        # Add small delay between worker starts to prevent race conditions
+        if i < NUM_WORKERS - 1:  # Don't delay after the last worker
+            time.sleep(1)
     # Start CPU logging thread
     # cpu_thread = Thread(target=log_cpu_usage, daemon=True)
     # cpu_thread.start()
@@ -110,12 +118,17 @@ async def lifespan(app):
         # Stop workers gracefully
         for _ in range(NUM_WORKERS):
             scrape_queue.put(None)
-        # Wait for all workers to finish cleanup
+        # Wait for all workers to finish cleanup with sequential shutdown
         for i, t in enumerate(workers):
             logging.info(f"Waiting for worker {i+1} to finish...")
-            t.join(timeout=15)  # Give each worker 5 seconds to cleanup
+            t.join(timeout=20)  # Increased timeout to 20 seconds per worker
             if t.is_alive():
                 logging.warning(f"Worker {i+1} did not finish cleanup in time")
+            else:
+                logging.info(f"Worker {i+1} shutdown complete")
+                # Add delay between worker shutdowns to prevent conflicts
+                if i < len(workers) - 1:  # Don't delay after the last worker
+                    time.sleep(2)
         logging.info("All Chrome drivers shut down.")
 
 app = FastAPI(lifespan=lifespan)
