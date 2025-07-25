@@ -108,7 +108,7 @@ def _send_to_backend(pincode, products):
     return False
 
 # API endpoint to queue scrape jobs
-@app.get("/scrape")
+@app.api_route("/scrape", methods=["GET", "HEAD"])
 def trigger_scrape():
     pincodes = [110036, 122001, 122002, 122003, 122011, 122018, 122022]
     jobs = []
