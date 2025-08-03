@@ -23,7 +23,7 @@ _System Architecture showing the interaction between Frontend, Backend, Scraper,
 ## ✨ Features
 
 - **Product Subscription**: Users can subscribe to specific Amul protein products
-- **City-based Service**: Currently available for Delhi, Haryana, and Bangalore
+- **City-based Service**: Currently available for Delhi, Haryana, and Karnataka
 - **Email Notifications**: Automatic email alerts when products are restocked
 - **Subscription Management**: Users can edit or unsubscribe from their subscriptions
 - **Real-time Product Monitoring**: Automated scraping of Amul's website for product availability
@@ -34,7 +34,7 @@ The service is currently available in the following cities:
 
 - **Delhi** - Capital region
 - **Haryana** - Gurgaon and surrounding areas
-- **Bangalore** - Karnataka capital
+- **Karnataka** - Bangalore and surrounding areas
 
 ## 🛠️ Technology Stack
 
@@ -175,7 +175,7 @@ Background Processing → Retry Logic → Delivery Confirmation
 #### **Subscription Management**
 
 - **Email Validation**: Users enter email to check existing subscriptions
-- **City Selection**: Dropdown with Delhi, Haryana, and Bangalore options
+- **City Selection**: Dropdown with Delhi, Haryana, and Karnataka options
 - **Product Selection**: Categorized product list (Milkshakes, Paneer, Whey Protein, etc.)
 - **Data Storage**: User preferences stored in MongoDB with unique tokens
 - **Email Confirmation**: Welcome email with edit/unsubscribe links
@@ -195,7 +195,7 @@ Background Processing → Retry Logic → Delivery Confirmation
 The Python scraper is the core monitoring component that:
 
 - **Monitors Amul's Website**: Continuously checks the protein products page at `https://shop.amul.com/en/browse/protein`
-- **Handles PIN Code Entry**: Automatically enters the configured PIN code (122003 for Haryana, 110036 for Delhi, and 56001 for Bangalore) to access location-specific product availability
+- **Handles PIN Code Entry**: Automatically enters the configured PIN code (122003 for Haryana, 110036 for Delhi, and 56001 for Karnataka) to access location-specific product availability
 - **Extracts Product Data**: Scrapes all protein products including:
   - Product names and IDs
   - Current stock status (Available/Sold Out)
@@ -341,4 +341,4 @@ For support or questions, please contact the development team or create an issue
 
 ---
 
-**Note**: This service is specifically designed for Delhi, Haryana, and Bangalore areas and monitors Amul protein product availability. The scraper runs periodically to check for product restocks and sends notifications to subscribed users.
+**Note**: This service is specifically designed for Delhi, Haryana, and Karnataka areas and monitors Amul protein product availability. The scraper runs periodically to check for product restocks and sends notifications to subscribed users.

@@ -27,7 +27,7 @@ function HomePage({ unsubscribeMode, editMode }) {
   const cityPincodeMap = {
     'Delhi': '110036',
     'Haryana': '122003',
-    'Bangalore': '560001'
+    'Karnataka': '560001'
   };
 
   // Auto-unsubscribe if in unsubscribeMode and token param is present
@@ -169,7 +169,7 @@ function HomePage({ unsubscribeMode, editMode }) {
               <option value="">Choose a city</option>
               <option value="Delhi">Delhi</option>
               <option value="Haryana">Haryana</option>
-              <option value="Bangalore">Bangalore</option>
+              <option value="Karnataka">Karnataka</option>
             </select>
           </label>
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>

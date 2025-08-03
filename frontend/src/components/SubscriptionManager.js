@@ -15,7 +15,7 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
   const cityPincodeMap = {
     'Delhi': '110036',
     'Haryana': '122003',
-    'Bangalore': '560001'
+    'Karnataka': '560001'
   };
 
   // Helper function to get city from pincode
@@ -24,7 +24,7 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
     const pincodeToCity = {
       '110036': 'Delhi',
       '122003': 'Haryana',
-      '560001': 'Bangalore'
+      '560001': 'Karnataka'
     };
     return pincodeToCity[pincode] || '';
   }
@@ -88,9 +88,9 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
             style={{ marginTop: 8, marginBottom: 8, width: '100%', padding: '8px' }}
           >
             <option value="">Choose a city</option>
-            <option value="Delhi">Delhi</option>
-            <option value="Haryana">Haryana</option>
-            <option value="Bangalore">Bangalore</option>
+                          <option value="Delhi">Delhi</option>
+              <option value="Haryana">Haryana</option>
+              <option value="Karnataka">Karnataka</option>
           </select>
         </label>
         <div className="button-group">
