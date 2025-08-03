@@ -23,16 +23,18 @@ _System Architecture showing the interaction between Frontend, Backend, Scraper,
 ## ✨ Features
 
 - **Product Subscription**: Users can subscribe to specific Amul protein products
-- **Pincode-based Service**: Currently available for Gurgaon area pincodes
+- **City-based Service**: Currently available for Delhi, Haryana, and Bangalore
 - **Email Notifications**: Automatic email alerts when products are restocked
 - **Subscription Management**: Users can edit or unsubscribe from their subscriptions
 - **Real-time Product Monitoring**: Automated scraping of Amul's website for product availability
 
 ## 🗺️ Supported Areas
 
-The service is currently available for the following Gurgaon pincodes(all except 122106):
+The service is currently available in the following cities:
 
-- 110036, 122001, 122002, 122003, 122004, 122005, 122006, 122007, 122008, 122009, 122010, 122011, 122015, 122016, 122017, 122018, 122051, 122052, 122101, 122102, 122103, 122104, 122105, 122107, 122108, 122413, 122414, 122502, 122503, 122504, 122505, 122506, 122508, 123106, 123401
+- **Delhi** - Capital region
+- **Haryana** - Gurgaon and surrounding areas
+- **Bangalore** - Karnataka capital
 
 ## 🛠️ Technology Stack
 
@@ -138,7 +140,7 @@ PORT=
 
 2. **Enter your email address** to check if you have an existing subscription
 
-3. **Select your pincode** from the supported Gurgaon areas
+3. **Select your city** from the supported areas
 
 4. **Choose products** you want to be notified about:
 
@@ -189,4 +191,4 @@ For support or questions, please contact the development team or create an issue
 
 ---
 
-**Note**: This service is specifically designed for Gurgaon area and monitors Amul protein product availability. The scraper runs periodically to check for product restocks and sends notifications to subscribed users.
+**Note**: This service is specifically designed for Delhi, Haryana, and Bangalore areas and monitors Amul protein product availability. The scraper runs periodically to check for product restocks and sends notifications to subscribed users.

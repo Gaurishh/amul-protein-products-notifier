@@ -13,7 +13,7 @@ function useQuery() {
 function HomePage({ unsubscribeMode, editMode }) {
   const [step, setStep] = useState('email');
   const [email, setEmail] = useState('');
-  const [pincode, setPincode] = useState('');
+  const [city, setCity] = useState('');
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState('');
@@ -21,13 +21,14 @@ function HomePage({ unsubscribeMode, editMode }) {
   const [loading, setLoading] = useState(false);
   const [unsubscribeLoading, setUnsubscribeLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
-  const [pincodeError, setPincodeError] = useState('');
   const query = useQuery();
 
-  // Valid Gurgaon pincodes
-  const validPincodes = [
-    "110036", "122001", "122002", "122003", "122004", "122005", "122006", "122007", "122008", "122009", "122010", "122011", "122015", "122016", "122017", "122018", "122051", "122052", "122101", "122102", "122103", "122104", "122105", "122107", "122108", "122413", "122414", "122502", "122503", "122504", "122505", "122506", "122508", "123106", "123401"
-  ];
+  // City to pincode mapping
+  const cityPincodeMap = {
+    'Delhi': '110036',
+    'Haryana': '122003',
+    'Bangalore': '560001'
+  };
 
   // Auto-unsubscribe if in unsubscribeMode and token param is present
   useEffect(() => {
@@ -83,14 +84,13 @@ function HomePage({ unsubscribeMode, editMode }) {
 
   const handleSubscribe = async () => {
     setLoading(true);
-    if (!email || !products.length || !pincode) {
+    if (!email || !products.length || !city) {
       setMessage('Please fill all fields and select at least one product.');
       setLoading(false);
       return;
     }
     
-    // Send 110036 for actual 110036, but 122003 for all other pincodes
-    const pincodeToSend = pincode === "110036" ? "110036" : "122003";
+    const pincodeToSend = cityPincodeMap[city];
     
     await subscribeUser(email, products, pincodeToSend);
     const userData = await checkUser(email);
@@ -119,23 +119,8 @@ function HomePage({ unsubscribeMode, editMode }) {
     setLoading(false);
   };
 
-  const validatePincode = (pincode) => {
-    if (!pincode) {
-      setPincodeError('');
-      return false;
-    }
-    if (!validPincodes.includes(pincode)) {
-      setPincodeError('Service is only available in Gurgaon. Please enter a valid Gurgaon pincode.');
-      return false;
-    }
-    setPincodeError('');
-    return true;
-  };
-
-  const handlePincodeChange = (e) => {
-    const newPincode = e.target.value;
-    setPincode(newPincode);
-    validatePincode(newPincode);
+  const handleCityChange = (e) => {
+    setCity(e.target.value);
   };
 
   const goToEmailPage = () => {
@@ -144,8 +129,7 @@ function HomePage({ unsubscribeMode, editMode }) {
     setUser(null);
     setProducts([]);
     setMessage('');
-    setPincode('');
-    setPincodeError('');
+    setCity('');
   };
 
   return (
@@ -176,22 +160,20 @@ function HomePage({ unsubscribeMode, editMode }) {
       {!unsubscribeLoading && !editLoading && step === 'pincode' && (
         <div>
           <label>
-            Enter your pincode:
-            <input
-              type="text"
-              value={pincode}
-              onChange={handlePincodeChange}
-              placeholder="Enter your 6-digit pincode"
+            Select your city:
+            <select
+              value={city}
+              onChange={handleCityChange}
               style={{ marginTop: 8, marginBottom: 8, width: '100%', padding: '8px' }}
-            />
+            >
+              <option value="">Choose a city</option>
+              <option value="Delhi">Delhi</option>
+              <option value="Haryana">Haryana</option>
+              <option value="Bangalore">Bangalore</option>
+            </select>
           </label>
-          {pincodeError && (
-            <div style={{ color: 'red', marginTop: 8, fontSize: '14px' }}>
-              {pincodeError}
-            </div>
-          )}
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-            {pincode && !pincodeError && (
+            {city && (
               <button
                 type="button"
                 onClick={() => {

@@ -5,17 +5,29 @@ import { updateUser, unsubscribeUser, getProducts } from '../api';
 
 function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPage, startEditing, onEditingMount }) {
   const [products, setProducts] = useState(user.products);
-  const [pincode, setPincode] = useState(user.pincode || '');
+  const [city, setCity] = useState(getCityFromPincode(user.pincode) || '');
   const [editing, setEditing] = useState(!!startEditing);
   const [message, setMessage] = useState('');
   const [productList, setProductList] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [pincodeError, setPincodeError] = useState('');
 
-  // Valid Gurgaon pincodes
-  const validPincodes = [
-    "110036", "122001", "122002", "122003", "122004", "122005", "122006", "122007", "122008", "122009", "122010", "122011", "122015", "122016", "122017", "122018", "122051", "122052", "122101", "122102", "122103", "122104", "122105", "122107", "122108", "122413", "122414", "122502", "122503", "122504", "122505", "122506", "122508", "123106", "123401"
-  ];
+  // City to pincode mapping
+  const cityPincodeMap = {
+    'Delhi': '110036',
+    'Haryana': '122003',
+    'Bangalore': '560001'
+  };
+
+  // Helper function to get city from pincode
+  function getCityFromPincode(pincode) {
+    if (!pincode) return '';
+    const pincodeToCity = {
+      '110036': 'Delhi',
+      '122003': 'Haryana',
+      '560001': 'Bangalore'
+    };
+    return pincodeToCity[pincode] || '';
+  }
 
   useEffect(() => {
     getProducts().then(setProductList);
@@ -29,36 +41,19 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
     }
   }, [startEditing, onEditingMount]);
 
-  const validatePincode = (pincode) => {
-    if (!pincode) {
-      setPincodeError('');
-      return false;
-    }
-    if (!validPincodes.includes(pincode)) {
-      setPincodeError('Service is only available in Gurgaon. Please enter a valid Gurgaon pincode.');
-      return false;
-    }
-    setPincodeError('');
-    return true;
-  };
-
-  const handlePincodeChange = (e) => {
-    const newPincode = e.target.value;
-    setPincode(newPincode);
-    validatePincode(newPincode);
+  const handleCityChange = (e) => {
+    setCity(e.target.value);
   };
 
   const handleSave = async () => {
     setLoading(true);
     
-    // Validate pincode before saving
-    if (!validatePincode(pincode)) {
+    if (!city) {
       setLoading(false);
       return;
     }
     
-    // Send 110036 for actual 110036, but 122003 for all other pincodes
-    const pincodeToSend = pincode === "110036" ? "110036" : "122003";
+    const pincodeToSend = cityPincodeMap[city];
     
     await updateUser(email, products, pincodeToSend);
     setMessage('Subscription updated!');
@@ -86,22 +81,20 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
         <h2>Update your subscription</h2>
         <ProductSelector selectedProducts={products} onChange={setProducts} />
         <label>
-          Pincode:
-          <input
-            type="text"
-            value={pincode}
-            required
-            placeholder="Enter your 6-digit pincode"
-            onChange={handlePincodeChange}
-          />
+          City:
+          <select
+            value={city}
+            onChange={handleCityChange}
+            style={{ marginTop: 8, marginBottom: 8, width: '100%', padding: '8px' }}
+          >
+            <option value="">Choose a city</option>
+            <option value="Delhi">Delhi</option>
+            <option value="Haryana">Haryana</option>
+            <option value="Bangalore">Bangalore</option>
+          </select>
         </label>
-        {pincodeError && (
-          <div style={{ color: 'red', marginTop: 8, fontSize: '14px' }}>
-            {pincodeError}
-          </div>
-        )}
         <div className="button-group">
-          <button onClick={handleSave} disabled={loading || pincodeError}>Save Changes</button>
+          <button onClick={handleSave} disabled={loading || !city}>Save Changes</button>
           <button onClick={() => setEditing(false)} disabled={loading}>Cancel</button>
           {loading && <span className="spinner" style={{ marginLeft: 10 }}></span>}
         </div>
@@ -113,7 +106,7 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
     <div>
       <h2>Your Subscription</h2>
       <p><b>Email:</b> {email}</p>
-      <p><b>Pincode:</b> {user.pincode}</p>
+      <p><b>City:</b> {getCityFromPincode(user.pincode) || 'Unknown'}</p>
       <p><b>Products:</b></p>
       {Object.entries(categorizeProducts(user.products)).map(([cat, items]) =>
         items.length > 0 && (
