@@ -186,6 +186,7 @@ Background Processing → Retry Logic → Delivery Confirmation
 - **Stock Detection**: Identifies products marked as "SOLD OUT" vs available
 - **Change Detection**: Compares current stock status with previous data
 - **Data Processing**: Sends stock changes to backend for processing
+- **Uptime Robot Service**: External monitoring service calls the `/scrape` endpoint every 10 minutes to maintain continuous operation
 
 ### **Scraper Details**
 
@@ -260,6 +261,7 @@ Network Issues → Retry Logic → Logging → Alert System
 - **Single Run Mode**: Executes once for testing purposes
 - **Configurable Timing**: Adjustable intervals based on requirements
 - **Background Operation**: Designed to run as a background service
+- **Uptime Robot Integration**: The `/scrape` endpoint is called every 10 minutes by Uptime Robot service to ensure continuous monitoring and prevent the scraper from going idle
 
 #### **Email Notification System**
 
