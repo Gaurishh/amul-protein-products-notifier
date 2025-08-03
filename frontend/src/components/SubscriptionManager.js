@@ -10,6 +10,12 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
   const [message, setMessage] = useState('');
   const [productList, setProductList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pincodeError, setPincodeError] = useState('');
+
+  // Valid Gurgaon pincodes
+  const validPincodes = [
+    "110036", "122001", "122002", "122003", "122004", "122005", "122006", "122007", "122008", "122009", "122010", "122011", "122015", "122016", "122017", "122018", "122051", "122052", "122101", "122102", "122103", "122104", "122105", "122107", "122108", "122413", "122414", "122502", "122503", "122504", "122505", "122506", "122508", "123106", "123401"
+  ];
 
   useEffect(() => {
     getProducts().then(setProductList);
@@ -23,8 +29,33 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
     }
   }, [startEditing, onEditingMount]);
 
+  const validatePincode = (pincode) => {
+    if (!pincode) {
+      setPincodeError('');
+      return false;
+    }
+    if (!validPincodes.includes(pincode)) {
+      setPincodeError('Service is only available in Gurgaon. Please enter a valid Gurgaon pincode.');
+      return false;
+    }
+    setPincodeError('');
+    return true;
+  };
+
+  const handlePincodeChange = (e) => {
+    const newPincode = e.target.value;
+    setPincode(newPincode);
+    validatePincode(newPincode);
+  };
+
   const handleSave = async () => {
     setLoading(true);
+    
+    // Validate pincode before saving
+    if (!validatePincode(pincode)) {
+      setLoading(false);
+      return;
+    }
     
     // Send 110036 for actual 110036, but 122003 for all other pincodes
     const pincodeToSend = pincode === "110036" ? "110036" : "122003";
@@ -60,13 +91,17 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
             type="text"
             value={pincode}
             required
-            pattern="\\d{6}"
-            title="Please enter a valid 6-digit pincode"
-            onChange={e => setPincode(e.target.value)}
+            placeholder="Enter your 6-digit pincode"
+            onChange={handlePincodeChange}
           />
         </label>
+        {pincodeError && (
+          <div style={{ color: 'red', marginTop: 8, fontSize: '14px' }}>
+            {pincodeError}
+          </div>
+        )}
         <div className="button-group">
-          <button onClick={handleSave} disabled={loading}>Save Changes</button>
+          <button onClick={handleSave} disabled={loading || pincodeError}>Save Changes</button>
           <button onClick={() => setEditing(false)} disabled={loading}>Cancel</button>
           {loading && <span className="spinner" style={{ marginLeft: 10 }}></span>}
         </div>
