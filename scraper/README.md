@@ -32,16 +32,11 @@ A Python-based web scraper that monitors Amul protein products for stock availab
 Create a `.env` file with the following variables:
 
 ```env
-# Backend API configuration
-BACKEND_API_BASE=http://localhost:8000/api
-
-# Scraping configuration
-SCRAPE_INTERVAL=60
-HEADLESS_MODE=false
-
-# Amul Website configuration
-AMUL_URL=https://shop.amul.com/en/browse/protein
-PIN_CODE=122003
+BACKEND_API_BASE=
+PIN_CODE=
+MONGO_URI=
+HEADLESS_MODE=
+PORT=
 ```
 
 ## Usage

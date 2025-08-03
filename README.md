@@ -89,7 +89,8 @@ The service is currently available for the following Gurgaon pincodes(all except
    ```bash
    cd frontend
    npm install
-   echo REACT_APP_BACKEND_API_BASE=http://localhost:8000/api > .env
+   cp env_example.txt .env
+   # Edit .env with your configuration
    npm start
    ```
 
@@ -97,7 +98,8 @@ The service is currently available for the following Gurgaon pincodes(all except
    ```bash
    cd scraper
    pip install -r requirements.txt
-   # Configure environment variables
+   cp env_example.txt .env
+   # Edit .env with your configuration
    python main.py
    ```
 
@@ -106,17 +108,28 @@ The service is currently available for the following Gurgaon pincodes(all except
 #### Backend (.env)
 
 ```env
-MONGO_URI=mongodb://localhost:27017/amul_products_notifier
-REDIS_URL=redis://localhost:6379
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
-PORT=8000
+EMAIL_USER=
+EMAIL_PASSWORD=
+MONGO_URI=
+FRONTEND_BASE_URL=
+REDIS_URL=
+PORT=
 ```
 
 #### Frontend (.env)
 
 ```env
-REACT_APP_BACKEND_API_BASE=http://localhost:8000/api
+REACT_APP_BACKEND_API_BASE=
+```
+
+#### Scraper (.env)
+
+```env
+BACKEND_API_BASE=
+PIN_CODE=
+MONGO_URI=
+HEADLESS_MODE=
+PORT=
 ```
 
 ## 📱 How to Use
