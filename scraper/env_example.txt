@@ -1,18 +1,5 @@
-# Backend API configuration
-BACKEND_API_BASE=http://localhost:8000/api
-
-# Frontend configuration
-FRONTEND_BASE_URL=http://localhost:3000
-
-# Scraping configuration
-SCRAPE_INTERVAL=60
-HEADLESS_MODE=false
-
-# Email configuration (for notifications)
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
-
-# Database configuration (if needed)
-MONGO_URI=mongodb://localhost:27017/amul_products_notifier 
+BACKEND_API_BASE=
+PIN_CODE=
+MONGO_URI=
+HEADLESS_MODE=
+PORT= 
