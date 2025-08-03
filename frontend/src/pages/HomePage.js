@@ -136,7 +136,7 @@ function HomePage({ unsubscribeMode, editMode }) {
     <div className="app-container">
       <div className="logo-title-row">
         <img src="/amul-logo.png" alt="Amul Logo" className="amul-logo" onClick={goToEmailPage} style={{ cursor: 'pointer' }} />
-        <h1 onClick={goToEmailPage} style={{ cursor: 'pointer' }}>Amul Protein Products Restock Notifier</h1>
+        <h1 onClick={goToEmailPage} style={{ cursor: 'pointer' }}>Amul Protein Products Notifier</h1>
       </div>
       {unsubscribeLoading && (
         <div className="confirmation-screen">
