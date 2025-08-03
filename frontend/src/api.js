@@ -57,3 +57,12 @@ export async function unsubscribeUserByToken(token) {
   });
   return res.json();
 }
+
+export async function editSubscriptionByToken(token, products, pincode) {
+  const res = await fetch(`${API_BASE}/edit-subscription?token=${encodeURIComponent(token)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ products, pincode }),
+  });
+  return res.json();
+}

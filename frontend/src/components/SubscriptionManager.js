@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ProductSelector from './ProductSelector';
 import UnsubscribeButton from './UnsubscribeButton';
-import { updateUser, unsubscribeUser, getProducts } from '../api';
+import { updateUser, unsubscribeUser, getProducts, editSubscriptionByToken } from '../api';
 
-function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPage, startEditing, onEditingMount }) {
+function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPage, startEditing, onEditingMount, token }) {
   const [products, setProducts] = useState(user.products);
   const [city, setCity] = useState(getCityFromPincode(user.pincode) || '');
   const [editing, setEditing] = useState(!!startEditing);
@@ -55,11 +55,22 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
     
     const pincodeToSend = cityPincodeMap[city];
     
-    await updateUser(email, products, pincodeToSend);
-    setMessage('Subscription updated!');
-    setEditing(false);
-    setLoading(false);
-    onUpdate();
+         try {
+       // Use token-based API if token is provided, otherwise use email-based API
+       if (token) {
+         await editSubscriptionByToken(token, products, pincodeToSend);
+       } else {
+         await updateUser(email, products, pincodeToSend);
+       }
+      
+             setEditing(false);
+       onUpdate();
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+      setMessage('Error updating subscription. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUnsubscribe = async () => {

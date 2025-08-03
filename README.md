@@ -25,7 +25,7 @@ _System Architecture showing the interaction between Frontend, Backend, Scraper,
 - **Product Subscription**: Users can subscribe to specific Amul protein products
 - **City-based Service**: Currently available for Delhi, Haryana, and Karnataka
 - **Email Notifications**: Automatic email alerts when products are restocked
-- **Subscription Management**: Users can edit or unsubscribe from their subscriptions
+- **Subscription Management**: Users can edit or unsubscribe from their subscriptions through secure email links
 - **Real-time Product Monitoring**: Automated scraping of Amul's website for product availability
 
 ## 🗺️ Supported Areas
@@ -304,7 +304,7 @@ Network Issues → Retry Logic → Logging → Alert System
 
 5. **Subscribe** and receive email notifications when products are restocked
 
-6. **Manage your subscription** through links provided in email notifications
+6. **Manage your subscription** through secure links provided in email notifications (editing is only available via email links)
 
 ## 🔧 API Endpoints
 

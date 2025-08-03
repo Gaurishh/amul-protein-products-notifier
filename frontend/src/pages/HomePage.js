@@ -101,9 +101,26 @@ function HomePage({ unsubscribeMode, editMode }) {
   };
 
   const handleUpdate = async () => {
-    // Refresh user data after update
-    const userData = await checkUser(email);
-    setUser(userData);
+    try {
+      if (user && user.email) {
+        const userData = await checkUser(user.email);
+        setUser(userData);
+        setMessage('Subscription updated successfully!');
+      } else if (editMode && query.get('token')) {
+        const userData = await checkUserByToken(query.get('token'));
+        setUser(userData);
+        setMessage('Subscription updated successfully!');
+      } else if (email) {
+        const userData = await checkUser(email);
+        setUser(userData);
+        setMessage('Subscription updated successfully!');
+      } else {
+        setMessage('Subscription updated successfully! Please refresh to see changes.');
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      setMessage('Subscription updated successfully! Please refresh to see changes.');
+    }
   };
 
   const handleUnsubscribe = async () => {
@@ -242,6 +259,7 @@ function HomePage({ unsubscribeMode, editMode }) {
           goToEmailPage={goToEmailPage}
           startEditing={forceEdit}
           onEditingMount={() => setForceEdit(false)}
+          token={editMode ? query.get('token') : null}
         />
       )}
       {!unsubscribeLoading && !editLoading && step === 'done' && (
@@ -249,7 +267,6 @@ function HomePage({ unsubscribeMode, editMode }) {
           <p>{message}</p>
           {user && email && (
             <div className="button-group" style={{ marginTop: '1.5em' }}>
-              <button onClick={() => { setStep('manage'); setForceEdit(true); setMessage(''); }}>Edit Subscription</button>
               <button className="UnsubscribeButton" onClick={handleUnsubscribe} disabled={loading}>Unsubscribe</button>
               {loading && <span className="spinner" style={{ marginLeft: 10 }}></span>}
             </div>

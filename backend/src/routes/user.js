@@ -4,11 +4,11 @@ import { subscribeUser, getUser, updateUser, deleteUser, unsubscribeByToken, edi
 const router = express.Router();
 
 router.post('/subscribe', subscribeUser);
-router.get('/user/:email', getUser);
-router.put('/user/:email', updateUser);
-router.delete('/user/:email', deleteUser);
 router.delete('/unsubscribe', unsubscribeByToken); // expects ?token=...
 router.put('/edit-subscription', editSubscriptionByToken); // expects ?token=... and body with new data
 router.get('/user-by-token', getUserByToken); // expects ?token=...
+router.get('/user/:email', getUser);
+router.put('/user/:email', updateUser);
+router.delete('/user/:email', deleteUser);
 
 export default router;
