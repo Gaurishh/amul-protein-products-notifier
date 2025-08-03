@@ -134,6 +134,154 @@ HEADLESS_MODE=
 PORT=
 ```
 
+## 🔄 How It Works
+
+### **System Overview**
+
+The Amul Protein Products Notifier operates as a complete monitoring and notification system with three main components working together:
+
+1. **Frontend (React.js)**: User interface for subscription management
+2. **Backend (Node.js)**: API server handling business logic and email processing
+3. **Scraper (Python)**: Automated web scraper monitoring Amul's website
+
+### **Data Flow Process**
+
+#### **1. User Subscription Flow**
+
+```
+User Input → Frontend → Backend API → MongoDB Database
+     ↓
+Email + City + Products → Validation → Storage → Confirmation Email
+```
+
+#### **2. Product Monitoring Flow**
+
+```
+Amul Website → Python Scraper → Backend API → Stock Change Detection
+     ↓
+Product Data → Comparison → Queue → Email Notifications
+```
+
+#### **3. Notification Flow**
+
+```
+Stock Change Detected → Redis Queue → Email Service → User Inbox
+     ↓
+Background Processing → Retry Logic → Delivery Confirmation
+```
+
+### **Technical Workflow**
+
+#### **Subscription Management**
+
+- **Email Validation**: Users enter email to check existing subscriptions
+- **City Selection**: Dropdown with Delhi, Haryana, and Bangalore options
+- **Product Selection**: Categorized product list (Milkshakes, Paneer, Whey Protein, etc.)
+- **Data Storage**: User preferences stored in MongoDB with unique tokens
+- **Email Confirmation**: Welcome email with edit/unsubscribe links
+
+#### **Automated Monitoring**
+
+- **Web Scraping**: Python scraper monitors Amul's protein products page
+- **Stock Detection**: Identifies products marked as "SOLD OUT" vs available
+- **Change Detection**: Compares current stock status with previous data
+- **Data Processing**: Sends stock changes to backend for processing
+
+### **Scraper Details**
+
+#### **What the Scraper Does**
+
+The Python scraper is the core monitoring component that:
+
+- **Monitors Amul's Website**: Continuously checks the protein products page at `https://shop.amul.com/en/browse/protein`
+- **Handles PIN Code Entry**: Automatically enters the configured PIN code (122003 for Haryana, 110036 for Delhi, and 56001 for Bangalore) to access location-specific product availability
+- **Extracts Product Data**: Scrapes all protein products including:
+  - Product names and IDs
+  - Current stock status (Available/Sold Out)
+  - Product categories and descriptions
+  - Pricing information (when available)
+- **Detects Stock Changes**: Compares current stock status with previously stored data to identify:
+  - Products that were "Sold Out" but are now "Available"
+  - Products that were "Available" but are now "Sold Out"
+- **Sends Data to Backend**: Transmits scraped data to the Node.js backend for processing
+
+#### **How the Scraper Works**
+
+##### **1. Initialization Process**
+
+```
+Start Scraper → Load Configuration → Initialize Selenium WebDriver → Navigate to Amul Website
+```
+
+##### **2. PIN Code Entry**
+
+```
+Locate PIN Input Field → Enter Configured PIN Code → Submit → Wait for Page Load
+```
+
+##### **3. Product Scraping**
+
+```
+Parse HTML → Extract Product Elements → Identify Stock Status → Store Product Data
+```
+
+##### **4. Data Processing**
+
+```
+Compare with Previous Data → Identify Changes → Filter Relevant Products → Send to Backend
+```
+
+##### **5. Error Handling**
+
+```
+Network Issues → Retry Logic → Logging → Alert System
+```
+
+#### **Technical Implementation**
+
+- **Selenium WebDriver**: Uses Chrome/Chromium browser automation for dynamic content
+- **BeautifulSoup**: HTML parsing for extracting product information
+- **Multiple Selectors**: Implements various CSS selectors to handle website structure changes
+- **Headless Mode**: Can run without browser UI for server deployment
+- **Rate Limiting**: Respects website load by implementing delays between requests
+- **Logging System**: Comprehensive logging for debugging and monitoring
+
+#### **Scraping Strategy**
+
+- **Robust Selectors**: Uses multiple CSS selectors to handle different page layouts
+- **Fallback Mechanisms**: If primary selectors fail, tries alternative methods
+- **Data Validation**: Validates scraped data before sending to backend
+- **Incremental Updates**: Only processes products that have changed status
+- **Error Recovery**: Automatically retries failed scraping attempts
+
+#### **Monitoring Schedule**
+
+- **Continuous Mode**: Runs indefinitely with configurable intervals (default: 60 seconds)
+- **Single Run Mode**: Executes once for testing purposes
+- **Configurable Timing**: Adjustable intervals based on requirements
+- **Background Operation**: Designed to run as a background service
+
+#### **Email Notification System**
+
+- **Queue Management**: Redis Bull Queue handles email processing
+- **Background Jobs**: Asynchronous email sending to prevent blocking
+- **Retry Logic**: Automatic retry for failed email deliveries
+- **Rate Limiting**: Prevents email spam and respects SMTP limits
+
+#### **Subscription Management**
+
+- **Token-based Links**: Secure edit and unsubscribe links in emails
+- **Real-time Updates**: Users can modify products and city preferences
+- **One-click Unsubscribe**: Immediate removal from notification list
+
+### **Architecture Benefits**
+
+- **Scalability**: Microservices architecture allows independent scaling
+- **Reliability**: Queue system ensures no notifications are lost
+- **User Experience**: Simple city selection instead of complex pincode validation
+- **Maintainability**: Clear separation of concerns between components
+- **Security**: Token-based authentication for subscription management
+
 ## 📱 How to Use
 
 1. **Visit the website**: [https://amul-protein-products-notifier.onrender.com](https://amul-protein-products-notifier.onrender.com)
