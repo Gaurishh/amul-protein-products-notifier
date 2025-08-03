@@ -14,6 +14,12 @@ This application consists of three main components:
 - **Backend**: Node.js/Express API server
 - **Scraper**: Python-based web scraper for monitoring Amul product availability
 
+## 🏗️ System Architecture
+
+![Architecture Diagram](Architecture.png)
+
+_System Architecture showing the interaction between Frontend, Backend, Scraper, and external services_
+
 ## ✨ Features
 
 - **Product Subscription**: Users can subscribe to specific Amul protein products
