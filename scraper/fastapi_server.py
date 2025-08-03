@@ -110,7 +110,7 @@ def _send_to_backend(pincode, products):
 # API endpoint to queue scrape jobs
 @app.api_route("/scrape", methods=["GET", "HEAD"])
 def trigger_scrape():
-    pincodes = [110036, 122003, 201305]
+    pincodes = [110036, 122003]
     jobs = []
     for pin in pincodes:
         job_id = str(uuid.uuid4())

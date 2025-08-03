@@ -25,7 +25,11 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
 
   const handleSave = async () => {
     setLoading(true);
-    await updateUser(email, products, pincode);
+    
+    // Send 110036 for actual 110036, but 122003 for all other pincodes
+    const pincodeToSend = pincode === "110036" ? "110036" : "122003";
+    
+    await updateUser(email, products, pincodeToSend);
     setMessage('Subscription updated!');
     setEditing(false);
     setLoading(false);

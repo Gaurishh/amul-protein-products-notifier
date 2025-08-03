@@ -49,7 +49,6 @@ def main():
     try:
         logger.info("Running scraper once...")
         scraper.run_once()
-        
     except KeyboardInterrupt:
         logger.info("Scraping stopped by user")
     except Exception as e:

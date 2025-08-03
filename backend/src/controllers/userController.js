@@ -142,6 +142,7 @@ export async function editSubscriptionByToken(req, res) {
   if (!token || !products || !products.length) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
+  
   try {
     const user = await User.findOne({ token });
     if (!user) return res.status(404).json({ error: 'Invalid or expired token' });

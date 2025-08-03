@@ -21,7 +21,13 @@ function HomePage({ unsubscribeMode, editMode }) {
   const [loading, setLoading] = useState(false);
   const [unsubscribeLoading, setUnsubscribeLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
+  const [pincodeError, setPincodeError] = useState('');
   const query = useQuery();
+
+  // Valid Gurgaon pincodes
+  const validPincodes = [
+    "110036", "122001", "122002", "122003", "122004", "122005", "122006", "122007", "122008", "122009", "122010", "122011", "122015", "122016", "122017", "122018", "122051", "122052", "122101", "122102", "122103", "122104", "122105", "122107", "122108", "122413", "122414", "122502", "122503", "122504", "122505", "122506", "122508", "123106", "123401"
+  ];
 
   // Auto-unsubscribe if in unsubscribeMode and token param is present
   useEffect(() => {
@@ -82,7 +88,11 @@ function HomePage({ unsubscribeMode, editMode }) {
       setLoading(false);
       return;
     }
-    await subscribeUser(email, products, pincode);
+    
+    // Send 110036 for actual 110036, but 122003 for all other pincodes
+    const pincodeToSend = pincode === "110036" ? "110036" : "122003";
+    
+    await subscribeUser(email, products, pincodeToSend);
     const userData = await checkUser(email);
     setUser(userData);
     setMessage('Subscription saved! You will be notified when products are restocked.');
@@ -109,6 +119,25 @@ function HomePage({ unsubscribeMode, editMode }) {
     setLoading(false);
   };
 
+  const validatePincode = (pincode) => {
+    if (!pincode) {
+      setPincodeError('');
+      return false;
+    }
+    if (!validPincodes.includes(pincode)) {
+      setPincodeError('Service is only available in Gurgaon. Please enter a valid Gurgaon pincode.');
+      return false;
+    }
+    setPincodeError('');
+    return true;
+  };
+
+  const handlePincodeChange = (e) => {
+    const newPincode = e.target.value;
+    setPincode(newPincode);
+    validatePincode(newPincode);
+  };
+
   const goToEmailPage = () => {
     setStep('email');
     setEmail('');
@@ -116,6 +145,7 @@ function HomePage({ unsubscribeMode, editMode }) {
     setProducts([]);
     setMessage('');
     setPincode('');
+    setPincodeError('');
   };
 
   return (
@@ -146,20 +176,22 @@ function HomePage({ unsubscribeMode, editMode }) {
       {!unsubscribeLoading && !editLoading && step === 'pincode' && (
         <div>
           <label>
-            Select your pincode:
-            <select
+            Enter your pincode:
+            <input
+              type="text"
               value={pincode}
-              onChange={e => setPincode(e.target.value)}
+              onChange={handlePincodeChange}
+              placeholder="Enter your 6-digit pincode"
               style={{ marginTop: 8, marginBottom: 8, width: '100%', padding: '8px' }}
-            >
-              <option value="">Choose a pincode</option>
-              <option value="110036">110036</option>
-              <option value="122003">122003</option>
-              <option value="122011">201305</option>
-            </select>
+            />
           </label>
+          {pincodeError && (
+            <div style={{ color: 'red', marginTop: 8, fontSize: '14px' }}>
+              {pincodeError}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-            {pincode && (
+            {pincode && !pincodeError && (
               <button
                 type="button"
                 onClick={() => {
