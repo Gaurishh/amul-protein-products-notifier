@@ -36,7 +36,6 @@ export async function sendBulkStockNotification(subscriber, products, pincode, t
     const body = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2c3e50;">Products Back in Stock!</h2>
-        <p><strong>Pincode:</strong> ${pincode}</p>
         <p>Hello!</p>
         <p>The following products you subscribed to are now back in stock:</p>
         <ul style="list-style-type: none; padding: 0;">
@@ -93,7 +92,6 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode, t
     const body = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2c3e50;">Subscription Confirmed!</h2>
-        <p><strong>Pincode:</strong> ${pincode}</p>
         <p>Thank you for subscribing! You will be notified when your selected products are restocked.</p>
         <p><strong>You subscribed for:</strong></p>
         <ul>
@@ -148,7 +146,6 @@ export async function sendExpiryNotification(email, pincode) {
     const body = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #e74c3c;">Subscription Expired</h2>
-        <p><strong>Pincode:</strong> ${pincode}</p>
         <p>Hello,</p>
         <p>Your subscription for Amul Protein Products notifications has expired due to inactivity.</p>
         <p>If you wish to continue receiving notifications, please resubscribe using the link below:</p>
