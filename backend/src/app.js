@@ -6,6 +6,7 @@ import productRoutes from './routes/product.js';
 import stockRoutes from './routes/stock.js';
 import { emailQueue, getQueueStatus } from './services/emailQueue.js';
 import { sendBulkStockNotification, sendExpiryNotification } from './services/emailService.js';
+import User from './models/User.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -53,7 +54,15 @@ emailQueue.process('send_stock_notification', async (job) => {
   try {
     console.log(`Processing email job for ${subscriber} with ${products.length} products`);
     
-    const result = await sendBulkStockNotification(subscriber, products, pincode);
+    // Fetch user token from MongoDB
+    const user = await User.findOne({ email: subscriber });
+    
+    if (!user) {
+      console.error(`User not found for email: ${subscriber}`);
+      throw new Error(`User not found for email: ${subscriber}`);
+    }
+    
+    const result = await sendBulkStockNotification(subscriber, products, pincode, user.token);
     
     if (result) {
       console.log(`Successfully sent email to ${subscriber}`);
