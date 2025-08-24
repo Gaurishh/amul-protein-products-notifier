@@ -4,6 +4,7 @@ import cors from 'cors';
 import userRoutes from './routes/user.js';
 import productRoutes from './routes/product.js';
 import stockRoutes from './routes/stock.js';
+import pincodeRoutes from './routes/pincodes.js';
 import { emailQueue, getQueueStatus } from './services/emailQueue.js';
 import { sendBulkStockNotification, sendExpiryNotification } from './services/emailService.js';
 import User from './models/User.js';
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/api', userRoutes);
 app.use('/api', productRoutes);
 app.use('/api', stockRoutes);
+app.use('/api', pincodeRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

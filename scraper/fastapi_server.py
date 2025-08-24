@@ -110,7 +110,24 @@ def _send_to_backend(pincode, products):
 # API endpoint to queue scrape jobs
 @app.api_route("/scrape", methods=["GET", "HEAD"])
 def trigger_scrape():
-    pincodes = [110036, 122003, 560001]
+    try:
+        # Fetch pincodes from backend
+        response = requests.get(f"{BACKEND_API_BASE}/pincodes")
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('success') and data.get('pincodes'):
+                pincodes = [int(pincode['pincode']) for pincode in data['pincodes']]
+                logging.info(f"Fetched {len(pincodes)} pincodes from backend: {pincodes}")
+            else:
+                logging.warning("Backend returned no pincodes, using fallback")
+                pincodes = [110036, 122003, 560001]  # Fallback to hardcoded values
+        else:
+            logging.error(f"Failed to fetch pincodes from backend, status: {response.status_code}")
+            pincodes = [110036, 122003, 560001]  # Fallback to hardcoded values
+    except Exception as e:
+        logging.error(f"Error fetching pincodes from backend: {e}")
+        pincodes = [110036, 122003, 560001]  # Fallback to hardcoded values
+    
     jobs = []
     for pin in pincodes:
         job_id = str(uuid.uuid4())

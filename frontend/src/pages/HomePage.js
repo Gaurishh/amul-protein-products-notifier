@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import EmailForm from '../components/EmailForm';
 import ProductSelector from '../components/ProductSelector';
 import SubscriptionManager from '../components/SubscriptionManager';
-import { checkUser, subscribeUser, unsubscribeUser, verifyPincode, trackPincode, checkUserByToken, unsubscribeUserByToken } from '../api';
+import { checkUser, subscribeUser, unsubscribeUser, verifyPincode, trackPincode, checkUserByToken, unsubscribeUserByToken, getPincodes } from '../api';
 import { useLocation } from 'react-router-dom';
 
 function useQuery() {
@@ -23,12 +23,35 @@ function HomePage({ unsubscribeMode, editMode }) {
   const [editLoading, setEditLoading] = useState(false);
   const query = useQuery();
 
-  // City to pincode mapping
-  const cityPincodeMap = {
-    'Delhi': '110036',
-    'Haryana': '122003',
-    'Karnataka': '560001'
-  };
+  // Dynamic city to pincode mapping from backend
+  const [cityPincodeMap, setCityPincodeMap] = useState({});
+  const [pincodesLoading, setPincodesLoading] = useState(false);
+
+  // Fetch pincodes from backend when component mounts
+  useEffect(() => {
+    const fetchPincodes = async () => {
+      try {
+        setPincodesLoading(true);
+        const response = await getPincodes();
+        if (response.success) {
+          // Convert pincodes array to city-pincode mapping
+          const pincodeMap = {};
+          response.pincodes.forEach(pincode => {
+            pincodeMap[pincode.state] = pincode.pincode;
+          });
+          setCityPincodeMap(pincodeMap);
+        } else {
+          console.error('Failed to fetch pincodes:', response.error);
+        }
+      } catch (error) {
+        console.error('Error fetching pincodes:', error);
+      } finally {
+        setPincodesLoading(false);
+      }
+    };
+
+    fetchPincodes();
+  }, []);
 
   // Auto-unsubscribe if in unsubscribeMode and token param is present
   useEffect(() => {
@@ -178,19 +201,29 @@ function HomePage({ unsubscribeMode, editMode }) {
         <div>
           <label>
             Select your city:
-            <select
-              value={city}
-              onChange={handleCityChange}
-              style={{ marginTop: 8, marginBottom: 8, width: '100%', padding: '8px' }}
-            >
-              <option value="">Choose a city</option>
-              <option value="Delhi">Delhi</option>
-              <option value="Haryana">Haryana</option>
-              <option value="Karnataka">Karnataka</option>
-            </select>
+            {pincodesLoading ? (
+              <div style={{ marginTop: 8, marginBottom: 8, padding: '8px', color: '#666' }}>
+                Loading cities... <span className="spinner" style={{ marginLeft: 8 }}></span>
+              </div>
+            ) : Object.keys(cityPincodeMap).length === 0 ? (
+              <div style={{ marginTop: 8, marginBottom: 8, padding: '8px', color: '#e53e3e' }}>
+                No cities available. Please contact support.
+              </div>
+            ) : (
+              <select
+                value={city}
+                onChange={handleCityChange}
+                style={{ marginTop: 8, marginBottom: 8, width: '100%', padding: '8px' }}
+              >
+                <option value="">Choose a city</option>
+                {Object.keys(cityPincodeMap).map(state => (
+                  <option key={state} value={state}>{state}</option>
+                ))}
+              </select>
+            )}
           </label>
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-            {city && (
+            {city && Object.keys(cityPincodeMap).length > 0 && (
               <button
                 type="button"
                 onClick={() => {

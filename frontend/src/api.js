@@ -66,3 +66,35 @@ export async function editSubscriptionByToken(token, products, pincode) {
   });
   return res.json();
 }
+
+// Pincode management API functions
+export async function getPincodes() {
+  const res = await fetch(`${API_BASE}/pincodes`);
+  return res.json();
+}
+
+export async function addPincode(pincode, state) {
+  const res = await fetch(`${API_BASE}/pincodes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pincode, state }),
+  });
+  return res.json();
+}
+
+export async function deletePincode(pincode) {
+  const res = await fetch(`${API_BASE}/pincodes/${pincode}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
+// Password verification API function
+export async function verifyPincodePassword(password) {
+  const res = await fetch(`${API_BASE}/verifyPincodePassword`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  return res.json();
+}
