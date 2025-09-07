@@ -6,6 +6,12 @@ A web application that helps users get notified when Amul protein products are r
 
 **Access the project website:** [https://amul-protein-products-notifier.onrender.com](https://amul-protein-products-notifier.onrender.com)
 
+## 🎬 Demo Video
+
+https://github.com/user-attachments/assets/8371be8f-8010-4a7f-a5b4-2fee9b3f627f
+
+_Watch the demo to see how the Amul Products Notifier works in action!_
+
 ## 📋 Project Overview
 
 This application consists of three main components:
