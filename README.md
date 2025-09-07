@@ -29,6 +29,11 @@ _System Architecture showing the interaction between Frontend, Backend, Scraper,
 - **Email Notifications**: Automatic email alerts when products are restocked
 - **Subscription Management**: Users can edit or unsubscribe from their subscriptions through secure email links
 - **Real-time Product Monitoring**: Automated scraping of Amul's website for product availability
+- **Multi-threaded Scraper**: FastAPI-based scraper with worker threads for efficient processing
+- **Queue-based Email System**: Redis Bull Queue for reliable email delivery with retry logic
+- **Production-ready Architecture**: Comprehensive system with monitoring and error handling
+- **Interactive Architecture Diagram**: Detailed Mermaid diagram showing system components
+- **Environment-aware Configuration**: Smart URL handling that prevents localhost in production emails
 
 ## 🗺️ Supported Areas
 
@@ -60,6 +65,8 @@ The service is currently available in the following cities:
 - Python
 - FastAPI
 - Selenium/BeautifulSoup
+- Multi-threaded Workers
+- Uptime Robot Integration
 
 ## 🚀 Getting Started
 
@@ -311,12 +318,23 @@ Network Issues → Retry Logic → Logging → Alert System
 
 ## 🔧 API Endpoints
 
+### Backend API (Node.js/Express)
+
 - `GET /api/products` - Get available products
 - `POST /api/subscribe` - Subscribe to products
 - `GET /api/user/:email` - Get user subscription
 - `PUT /api/user/:email` - Update subscription
 - `DELETE /api/user/:email` - Unsubscribe
 - `POST /api/verify-pincode` - Verify pincode availability
+- `GET /api/queue-status` - Get email queue status
+- `GET /health` - Health check endpoint
+- `GET /ping` - Ping endpoint for monitoring
+
+### Scraper API (Python/FastAPI)
+
+- `GET /scrape` - Trigger scraping for all supported pincodes
+- `GET /scrape_status/{job_id}` - Check scraping job status
+- `GET /ping` - Scraper health check
 
 ## 📧 Email Notifications
 
@@ -325,6 +343,42 @@ The system automatically sends email notifications when:
 - Products are restocked in the user's area
 - Subscription is created/updated
 - Unsubscribe confirmation
+- Subscription expiry (due to inactivity)
+
+### Email Features
+
+- **Rich HTML Templates**: Beautiful, responsive email designs
+- **Product Images**: Includes product thumbnails when available
+- **Direct Links**: Links to Amul product pages and subscription management
+- **Queue Processing**: Reliable delivery with retry logic and error handling
+
+## 🆕 Recent Updates & Improvements
+
+### Architecture & Documentation
+
+- **Interactive Architecture Diagram**: Added comprehensive Mermaid diagram showing all system components
+- **Light Theme Design**: Updated diagram with vibrant colors optimized for light mode viewing
+- **Enhanced Documentation**: Detailed system flow descriptions and technical implementation details
+
+### Email System Enhancements
+
+- **Enhanced Email Templates**: Improved HTML templates with better styling and product images
+- **Queue System**: Redis Bull Queue implementation for reliable email processing
+- **Retry Logic**: Automatic retry for failed email deliveries
+
+### Scraper Improvements
+
+- **FastAPI Integration**: Modern Python web framework for better performance
+- **Multi-threaded Processing**: Separate worker threads for scraping and data transmission
+- **Job Status Tracking**: Real-time monitoring of scraping job progress
+- **Uptime Robot Integration**: External monitoring service for continuous operation
+
+### System Reliability
+
+- **Health Check Endpoints**: Monitoring endpoints for both backend and scraper
+- **Error Handling**: Comprehensive error handling and logging throughout the system
+- **Environment Configuration**: Improved environment variable management
+- **Production Readiness**: Enhanced configuration for production deployment
 
 ## 🤝 Contributing
 
@@ -337,6 +391,30 @@ The system automatically sends email notifications when:
 ## 📄 License
 
 This project is licensed under the MIT License.
+
+## 📊 Monitoring & Deployment
+
+### Production Monitoring
+
+- **Uptime Robot**: External monitoring service calls `/scrape` endpoint every 10 minutes
+- **Health Checks**: Built-in health check endpoints for both backend and scraper
+- **Queue Monitoring**: Real-time email queue status and job processing metrics
+- **Error Logging**: Comprehensive logging system for debugging and monitoring
+
+### Deployment Architecture
+
+- **Frontend**: Deployed on Render with React build
+- **Backend**: Node.js API server with MongoDB and Redis
+- **Scraper**: Python FastAPI service with Selenium WebDriver
+- **Database**: MongoDB Atlas for data persistence
+- **Queue**: Redis for email job processing
+- **Email**: Gmail SMTP for email delivery
+
+### Environment Configuration
+
+- **Smart URL Handling**: Automatic production URL detection
+- **Environment Variables**: Secure configuration management
+- **Fallback Systems**: Graceful degradation when services are unavailable
 
 ## 📞 Support
 
