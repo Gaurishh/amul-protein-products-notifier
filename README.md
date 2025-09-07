@@ -10,8 +10,8 @@ A web application that helps users get notified when Amul protein products are r
 
 https://github.com/user-attachments/assets/8371be8f-8010-4a7f-a5b4-2fee9b3f627f
 
-_Watch the demo to see how the Amul Products Notifier works in action!_
-_PS: You can edit your selected products or unsubscribe through the emails you recieve from us!_
+- _Watch the demo to see how the Amul Products Notifier works in action!_
+- _PS: You can edit your selected products or unsubscribe through the emails you recieve from us!_
 
 ## 📋 Project Overview
 
