@@ -16,7 +16,9 @@ This application consists of three main components:
 
 ## 🏗️ System Architecture
 
-![Architecture Diagram](Architecture.png)
+The complete system architecture is documented in [architecture_diagram.md](architecture_diagram.md) with a detailed Mermaid diagram showing the interaction between Frontend, Backend, Scraper, and external services.
+
+![Architecture Diagram](architecture_diagram.md)
 
 _System Architecture showing the interaction between Frontend, Backend, Scraper, and external services_
 
