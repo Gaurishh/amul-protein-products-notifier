@@ -1,6 +1,6 @@
 import Product from '../models/Product.js';
 import Pincode from '../models/Pincode.js';
-import { emailQueue } from '../services/emailQueue.js';
+import { processQueue } from '../services/emailQueue.js';
 import { enqueueExpiryNotifications } from '../services/emailQueue.js';
 
 // GET /products

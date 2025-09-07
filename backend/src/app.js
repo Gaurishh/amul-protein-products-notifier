@@ -5,8 +5,8 @@ import userRoutes from './routes/user.js';
 import productRoutes from './routes/product.js';
 import stockRoutes from './routes/stock.js';
 import pincodeRoutes from './routes/pincodes.js';
-import { emailQueue, getQueueStatus } from './services/emailQueue.js';
-import { sendBulkStockNotification, sendExpiryNotification } from './services/emailService.js';
+import { processQueue, getQueueStatus } from './services/emailQueue.js';
+import { sendBulkStockNotification, sendExpiryNotification, sendSubscriptionConfirmation, sendUnsubscribeConfirmation } from './services/emailService.js';
 import User from './models/User.js';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -48,13 +48,13 @@ app.get("/ping", (req, res) => {
   res.status(200).send("pong");
 });
 
-// Email Queue Processing Logic
+// Process Queue Processing Logic
 // Process stock notification jobs
-emailQueue.process('send_stock_notification', async (job) => {
+processQueue.process('send_stock_notification', async (job) => {
   const { subscriber, products, pincode } = job.data;
   
   try {
-    console.log(`Processing email job for ${subscriber} with ${products.length} products`);
+    console.log(`Processing stock notification job for ${subscriber} with ${products.length} products`);
     
     // Fetch user token from MongoDB
     const user = await User.findOne({ email: subscriber });
@@ -67,20 +67,20 @@ emailQueue.process('send_stock_notification', async (job) => {
     const result = await sendBulkStockNotification(subscriber, products, pincode, user.token);
     
     if (result) {
-      console.log(`Successfully sent email to ${subscriber}`);
+      console.log(`Successfully sent stock notification to ${subscriber}`);
       return { success: true, subscriber, productsCount: products.length };
     } else {
-      throw new Error(`Failed to send email to ${subscriber}`);
+      throw new Error(`Failed to send stock notification to ${subscriber}`);
     }
     
   } catch (error) {
-    console.error(`Error processing email job for ${subscriber}:`, error);
+    console.error(`Error processing stock notification job for ${subscriber}:`, error);
     throw error; // This will trigger a retry
   }
 });
 
 // Process expiry notification jobs
-emailQueue.process('send_expiry_notification', async (job) => {
+processQueue.process('send_expiry_notification', async (job) => {
   const { email, pincode } = job.data;
   try {
     console.log(`Processing expiry notification job for ${email} (pincode: ${pincode})`);
@@ -97,31 +97,188 @@ emailQueue.process('send_expiry_notification', async (job) => {
   }
 });
 
+// Process subscription jobs
+processQueue.process('process_subscription', async (job) => {
+  const { email, products, pincode, token } = job.data;
+  
+  try {
+    console.log(`Processing subscription job for ${email}`);
+    
+    // Add user to product subscribers in the correct pincode collection
+    const collectionName = `products_${pincode}`;
+    for (const productId of products) {
+      await mongoose.connection.collection(collectionName).updateOne(
+        { productId },
+        { $addToSet: { subscribers: email } },
+        { upsert: true }
+      );
+    }
+    
+    // Track pincode interaction (update lastInteracted)
+    const now = new Date();
+    await mongoose.connection.collection('pincodes').updateOne(
+      { pincode },
+      { $set: { lastInteracted: now } },
+      { upsert: true }
+    );
+    
+    // Send confirmation email
+    const result = await sendSubscriptionConfirmation(email, products, pincode, token, mongoose);
+    
+    if (result) {
+      console.log(`Successfully processed subscription for ${email}`);
+      return { success: true, email, productsCount: products.length };
+    } else {
+      throw new Error(`Failed to send confirmation email to ${email}`);
+    }
+    
+  } catch (error) {
+    console.error(`Error processing subscription job for ${email}:`, error);
+    throw error;
+  }
+});
+
+// Process unsubscribe jobs
+processQueue.process('process_unsubscribe', async (job) => {
+  const { email, pincode, userData } = job.data;
+  
+  try {
+    console.log(`Processing unsubscribe job for ${email}`);
+    
+    // Use the provided userData instead of trying to find the user
+    if (!userData) {
+      console.log(`No user data provided for ${email}, skipping unsubscribe processing`);
+      return { success: true, email, message: 'No user data provided' };
+    }
+    
+    // Get product names before removing user from subscribers
+    let productNames = userData.products;
+    try {
+      const collectionName = `products_${pincode}`;
+      const products = await mongoose.connection.collection(collectionName).find(
+        { productId: { $in: userData.products } },
+        { projection: { productId: 1, name: 1 } }
+      ).toArray();
+      
+      // Create a map of productId to name
+      const productMap = {};
+      products.forEach(product => {
+        productMap[product.productId] = product.name || product.productId;
+      });
+      
+      // Replace productIds with names, fallback to productId if name not found
+      productNames = userData.products.map(id => productMap[id] || id);
+    } catch (error) {
+      console.error('Error fetching product names for unsubscribe email:', error);
+      // Fallback to productIds if database fetch fails
+      productNames = userData.products;
+    }
+    
+    // Remove user from all product subscribers in the correct pincode collection
+    const collectionName = `products_${pincode}`;
+    for (const productId of userData.products) {
+      await mongoose.connection.collection(collectionName).updateOne(
+        { productId },
+        { $pull: { subscribers: email } }
+      );
+    }
+    
+    // Send unsubscribe confirmation email
+    const result = await sendUnsubscribeConfirmation(email, productNames);
+    
+    if (result) {
+      console.log(`Successfully processed unsubscribe for ${email}`);
+      return { success: true, email, productsCount: productNames.length };
+    } else {
+      throw new Error(`Failed to send unsubscribe confirmation email to ${email}`);
+    }
+    
+  } catch (error) {
+    console.error(`Error processing unsubscribe job for ${email}:`, error);
+    throw error;
+  }
+});
+
+// Process unsubscribe by token jobs
+processQueue.process('process_unsubscribe_by_token', async (job) => {
+  const { token, userData } = job.data;
+  
+  try {
+    console.log(`Processing unsubscribe by token job for ${userData.email}`);
+    
+    // Get product names before removing user from subscribers
+    let productNames = userData.products;
+    try {
+      const collectionName = `products_${userData.pincode}`;
+      const products = await mongoose.connection.collection(collectionName).find(
+        { productId: { $in: userData.products } },
+        { projection: { productId: 1, name: 1 } }
+      ).toArray();
+      
+      // Create a map of productId to name
+      const productMap = {};
+      products.forEach(product => {
+        productMap[product.productId] = product.name || product.productId;
+      });
+      
+      // Replace productIds with names, fallback to productId if name not found
+      productNames = userData.products.map(id => productMap[id] || id);
+    } catch (error) {
+      console.error('Error fetching product names for unsubscribe email:', error);
+      // Fallback to productIds if database fetch fails
+      productNames = userData.products;
+    }
+    
+    // Remove user from all product subscribers in the correct pincode collection
+    const collectionName = `products_${userData.pincode}`;
+    for (const productId of userData.products) {
+      await mongoose.connection.collection(collectionName).updateOne(
+        { productId },
+        { $pull: { subscribers: userData.email } }
+      );
+    }
+    
+    // Send unsubscribe confirmation email
+    const result = await sendUnsubscribeConfirmation(userData.email, productNames);
+    
+    if (result) {
+      console.log(`Successfully processed unsubscribe by token for ${userData.email}`);
+      return { success: true, email: userData.email, productsCount: productNames.length };
+    } else {
+      throw new Error(`Failed to send unsubscribe confirmation email to ${userData.email}`);
+    }
+    
+  } catch (error) {
+    console.error(`Error processing unsubscribe by token job:`, error);
+    throw error;
+  }
+});
+
 // Handle job completion
-emailQueue.on('completed', (job, result) => {
-  console.log(`Email job ${job.id} completed for ${result.subscriber || result.email}`);
+processQueue.on('completed', (job, result) => {
+  console.log(`Process job ${job.id} completed for ${result.email || result.subscriber || 'user'}`);
 });
 
 // Handle job failure
-emailQueue.on('failed', (job, err) => {
-  console.error(`Email job ${job.id} failed for ${job.data.subscriber || job.data.email}:`, err);
+processQueue.on('failed', (job, err) => {
+  console.error(`Process job ${job.id} failed for type ${job.data.type}:`, err);
 });
 
 // Handle job retry
-emailQueue.on('retry', (job, err) => {
-  console.log(`Email job ${job.id} will be retried for ${job.data.subscriber || job.data.email}:`, err.message);
+processQueue.on('retry', (job, err) => {
+  console.log(`Process job ${job.id} will be retried for type ${job.data.type}:`, err.message);
 });
 
 // Graceful shutdown handlers
 process.on('SIGINT', async () => {
-  console.log('Shutting down server and email worker...');
-  await emailQueue.close();
+  console.log('Shutting down server and process queue...');
+  await processQueue.close();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.log('Shutting down server and email worker...');
-  await emailQueue.close();
+  console.log('Shutting down server and process queue...');
+  await processQueue.close();
   process.exit(0);
 });
 
@@ -133,10 +290,10 @@ mongoose.connect(MONGO_URI, {
     app.set('mongoose', mongooseInstance);
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log('Email queue system ready');
-      console.log('Email worker started. Waiting for jobs...');
+      console.log('Process queue system ready');
+      console.log('Queue workers started. Waiting for jobs...');
     });
   })
   .catch((err) => {
     console.error('MongoDB connection error:', err);
-  }); 
+  });

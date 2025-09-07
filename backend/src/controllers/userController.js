@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import { sendSubscriptionConfirmation, sendUnsubscribeConfirmation } from '../services/emailService.js';
+import { enqueueSubscriptionJob, enqueueUnsubscribeJob, enqueueUnsubscribeByTokenJob } from '../services/emailQueue.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // POST /subscribe
@@ -13,29 +14,22 @@ export async function subscribeUser(req, res) {
     if (user) {
       return res.status(400).json({ error: 'User already exists' });
     }
+    
+    // Create user with token
     user = new User({ email, products, pincode, token: uuidv4() });
     await user.save();
-    // Add user to product subscribers in the correct pincode collection
-    const collectionName = `products_${pincode}`;
-    for (const productId of products) {
-      await req.app.get('mongoose').connection.collection(collectionName).updateOne(
-        { productId },
-        { $addToSet: { subscribers: email } },
-        { upsert: true }
-      );
-    }
-    // Track pincode interaction (update lastInteracted)
-    const now = new Date();
-    await req.app.get('mongoose').connection.collection('pincodes').updateOne(
-      { pincode },
-      { $set: { lastInteracted: now } },
-      { upsert: true }
-    );
-    // Send confirmation email (do not block response on error)
-    sendSubscriptionConfirmation(email, products, pincode, user.token, req.app.get('mongoose')).catch((err) => {
-      console.error('Failed to send confirmation email:', err);
+    
+    // Enqueue subscription processing job for immediate response
+    enqueueSubscriptionJob(email, products, pincode, user.token).catch((err) => {
+      console.error('Failed to enqueue subscription job:', err);
     });
-    res.json({ message: 'Subscription saved', pincode });
+    
+    // Return immediate response
+    res.json({ 
+      message: 'Subscription queued for processing', 
+      pincode,
+      status: 'processing'
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -98,47 +92,29 @@ export async function updateUser(req, res) {
 export async function deleteUser(req, res) {
   const { email } = req.params;
   try {
-    const user = await User.findOneAndDelete({ email });
+    const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: 'User not found' });
     
-    // Get product names before removing user from subscribers
-    let productNames = user.products;
-    try {
-      const collectionName = `products_${user.pincode}`;
-      const products = await req.app.get('mongoose').connection.collection(collectionName).find(
-        { productId: { $in: user.products } },
-        { projection: { productId: 1, name: 1 } }
-      ).toArray();
-      
-      // Create a map of productId to name
-      const productMap = {};
-      products.forEach(product => {
-        productMap[product.productId] = product.name || product.productId;
-      });
-      
-      // Replace productIds with names, fallback to productId if name not found
-      productNames = user.products.map(id => productMap[id] || id);
-    } catch (error) {
-      console.error('Error fetching product names for unsubscribe email:', error);
-      // Fallback to productIds if database fetch fails
-      productNames = user.products;
-    }
+    // Store user data before deletion
+    const userData = {
+      email: user.email,
+      products: user.products,
+      pincode: user.pincode
+    };
     
-    // Remove user from all product subscribers in the correct pincode collection
-    const collectionName = `products_${user.pincode}`;
-    for (const productId of user.products) {
-      await req.app.get('mongoose').connection.collection(collectionName).updateOne(
-        { productId },
-        { $pull: { subscribers: email } }
-      );
-    }
+    // Delete user immediately
+    await User.findOneAndDelete({ email });
     
-    // Send unsubscribe confirmation email (do not block response on error)
-    sendUnsubscribeConfirmation(email, productNames).catch((err) => {
-      console.error('Failed to send unsubscribe confirmation email:', err);
+    // Enqueue unsubscribe processing job with user data for immediate response
+    enqueueUnsubscribeJob(email, user.pincode, userData).catch((err) => {
+      console.error('Failed to enqueue unsubscribe job:', err);
     });
     
-    res.json({ message: 'Unsubscribed' });
+    // Return immediate response
+    res.json({ 
+      message: 'Unsubscription queued for processing',
+      status: 'processing'
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -149,47 +125,29 @@ export async function unsubscribeByToken(req, res) {
   const { token } = req.query;
   if (!token) return res.status(400).json({ error: 'Missing token' });
   try {
-    const user = await User.findOneAndDelete({ token });
+    const user = await User.findOne({ token });
     if (!user) return res.status(404).json({ error: 'Invalid or expired token' });
     
-    // Get product names before removing user from subscribers
-    let productNames = user.products;
-    try {
-      const collectionName = `products_${user.pincode}`;
-      const products = await req.app.get('mongoose').connection.collection(collectionName).find(
-        { productId: { $in: user.products } },
-        { projection: { productId: 1, name: 1 } }
-      ).toArray();
-      
-      // Create a map of productId to name
-      const productMap = {};
-      products.forEach(product => {
-        productMap[product.productId] = product.name || product.productId;
-      });
-      
-      // Replace productIds with names, fallback to productId if name not found
-      productNames = user.products.map(id => productMap[id] || id);
-    } catch (error) {
-      console.error('Error fetching product names for unsubscribe email:', error);
-      // Fallback to productIds if database fetch fails
-      productNames = user.products;
-    }
+    // Store user data before deletion
+    const userData = {
+      email: user.email,
+      products: user.products,
+      pincode: user.pincode
+    };
     
-    // Remove user from all product subscribers in the correct pincode collection
-    const collectionName = `products_${user.pincode}`;
-    for (const productId of user.products) {
-      await req.app.get('mongoose').connection.collection(collectionName).updateOne(
-        { productId },
-        { $pull: { subscribers: user.email } }
-      );
-    }
+    // Delete user immediately
+    await User.findOneAndDelete({ token });
     
-    // Send unsubscribe confirmation email (do not block response on error)
-    sendUnsubscribeConfirmation(user.email, productNames).catch((err) => {
-      console.error('Failed to send unsubscribe confirmation email:', err);
+    // Enqueue unsubscribe processing job with user data for immediate response
+    enqueueUnsubscribeByTokenJob(token, userData).catch((err) => {
+      console.error('Failed to enqueue unsubscribe by token job:', err);
     });
     
-    res.json({ message: 'Unsubscribed' });
+    // Return immediate response
+    res.json({ 
+      message: 'Unsubscription queued for processing',
+      status: 'processing'
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
