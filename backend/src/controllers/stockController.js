@@ -15,7 +15,7 @@ export async function processStockChanges(req, res) {
     const collectionName = `products_${pincode}`;
     const restockedProducts = [];
     for (const product of products) {
-      const { productId, name, sold_out } = product;
+      const { productId, name, sold_out, productPageUrl, productImageUrl } = product;
       // Fetch the existing document for this product
       const existing = await req.app.get('mongoose').connection.collection(collectionName).findOne({ productId });
       let wasSoldOut = null;
@@ -29,19 +29,31 @@ export async function processStockChanges(req, res) {
         restockedProducts.push({
           productId,
           name,
+          productPageUrl: productPageUrl || existing?.productPageUrl || null,
+          productImageUrl: productImageUrl || existing?.productImageUrl || null,
           subscribers: [...new Set(subscribers)]
         });
       }
       // Upsert the latest product data
+      const updateData = {
+        name,
+        sold_out,
+        timestamp: timestamp ? new Date(timestamp * 1000) : new Date(),
+        scraper_id: scraper_id || null
+      };
+      
+      // Always set URLs if they are provided (not null/undefined/empty string)
+      if (productPageUrl && productPageUrl.trim() !== '') {
+        updateData.productPageUrl = productPageUrl;
+      }
+      if (productImageUrl && productImageUrl.trim() !== '') {
+        updateData.productImageUrl = productImageUrl;
+      }
+      
       await req.app.get('mongoose').connection.collection(collectionName).updateOne(
         { productId },
         {
-          $set: {
-            name,
-            sold_out,
-            timestamp: timestamp ? new Date(timestamp * 1000) : new Date(),
-            scraper_id: scraper_id || null
-          },
+          $set: updateData,
           $setOnInsert: { subscribers: existing && existing.subscribers ? existing.subscribers : [] }
         },
         { upsert: true }

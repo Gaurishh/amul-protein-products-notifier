@@ -30,8 +30,10 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
   }
 
   useEffect(() => {
-    getProducts().then(setProductList);
-  }, []);
+    if (user.pincode) {
+      getProducts(user.pincode).then(setProductList);
+    }
+  }, [user.pincode]);
 
   // If startEditing prop changes from false to true, enter editing mode
   useEffect(() => {
@@ -90,7 +92,11 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
     return (
       <div>
         <h2>Update your subscription</h2>
-        <ProductSelector selectedProducts={products} onChange={setProducts} />
+        <ProductSelector 
+          selectedProducts={products} 
+          onChange={setProducts} 
+          pincode={cityPincodeMap[city]} 
+        />
         <label>
           City:
           <select

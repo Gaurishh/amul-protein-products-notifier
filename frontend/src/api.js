@@ -6,8 +6,11 @@ export async function checkUser(email) {
   return res.json();
 }
 
-export async function getProducts() {
-  const res = await fetch(`${API_BASE}/products`);
+export async function getProducts(pincode) {
+  if (!pincode) {
+    throw new Error('Pincode is required to fetch products');
+  }
+  const res = await fetch(`${API_BASE}/products?pincode=${encodeURIComponent(pincode)}`);
   return res.json();
 }
 

@@ -25,8 +25,12 @@ export async function sendBulkStockNotification(subscriber, products, pincode, t
 
     // Create product list HTML
     const productLines = products.map(product => {
-      const productUrl = `https://shop.amul.com/en/product/${product.productId}`;
-      return `<li><a href="${productUrl}">${product.name}</a></li>`;
+      const productUrl = product.productPageUrl || `https://shop.amul.com/en/product/${product.productId}`;
+      const productImage = product.productImageUrl ? `<img src="${product.productImageUrl}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 5px; margin-right: 10px; vertical-align: middle;">` : '';
+      return `<li style="margin: 10px 0; padding: 10px; border: 1px solid #ecf0f1; border-radius: 5px;">
+        ${productImage}
+        <a href="${productUrl}" style="color: #3498db; text-decoration: none; font-weight: bold;">${product.name}</a>
+      </li>`;
     }).join('');
 
     const subject = products.length === 1

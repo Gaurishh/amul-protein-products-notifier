@@ -6,7 +6,24 @@ import { enqueueExpiryNotifications } from '../services/emailQueue.js';
 // GET /products
 export async function getProducts(req, res) {
   try {
-    const products = await Product.find({}, '-_id productId name');
+    const { pincode } = req.query;
+    
+    if (!pincode) {
+      return res.status(400).json({ error: 'Pincode is required' });
+    }
+    
+    // Use pincode-specific collection
+    const collectionName = `products_${pincode}`;
+    const collection = req.app.get('mongoose').connection.collection(collectionName);
+    
+    // Check if collection exists
+    const collections = await req.app.get('mongoose').connection.db.listCollections({ name: collectionName }).toArray();
+    if (collections.length === 0) {
+      return res.status(404).json({ error: 'No products found for this pincode' });
+    }
+    
+    // Fetch products from pincode-specific collection
+    const products = await collection.find({}, { projection: { _id: 0, productId: 1, name: 1, productPageUrl: 1, productImageUrl: 1 } }).toArray();
     res.json(products);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -260,7 +260,11 @@ function HomePage({ unsubscribeMode, editMode }) {
       )}
       {!unsubscribeLoading && !editLoading && step === 'products' && (
         <div>
-          <ProductSelector selectedProducts={products} onChange={handleProductSelect} />
+          <ProductSelector 
+            selectedProducts={products} 
+            onChange={handleProductSelect} 
+            pincode={cityPincodeMap[city]} 
+          />
           <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
             <button onClick={handleSubscribe} disabled={loading}>
               Subscribe

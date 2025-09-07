@@ -191,15 +191,51 @@ class AmulScraper:
                     product_name_elem = element.select_one(".product-grid-name a")
                     product_name = product_name_elem.get_text(strip=True) if product_name_elem else "Unknown Product"
                     
-                    # Extract product ID from URL or data attribute
+                    # Extract product page link
                     product_link = element.select_one("a")
-                    product_id = None
+                    product_page_url = None
                     if product_link:
                         href = product_link.get('href', '')
-                        if '/product/' in href:
-                            product_id = href.split('/product/')[-1].split('/')[0]
-                        elif '/en/product/' in href:
-                            product_id = href.split('/en/product/')[-1].split('/')[0]
+                        if href:
+                            # Convert relative URLs to absolute URLs
+                            if href.startswith('/'):
+                                product_page_url = f"https://shop.amul.com{href}"
+                            elif href.startswith('http'):
+                                product_page_url = href
+                            else:
+                                product_page_url = f"https://shop.amul.com/{href}"
+                    
+                    # Extract product image URL
+                    product_image_url = None
+                    # Try multiple selectors for product images
+                    image_selectors = [
+                        ".product-grid-image img",
+                        ".product-image img", 
+                        "img[src*='amul']",
+                        "img"
+                    ]
+                    
+                    for selector in image_selectors:
+                        img_elem = element.select_one(selector)
+                        if img_elem:
+                            src = img_elem.get('src') or img_elem.get('data-src')
+                            if src:
+                                # Convert relative URLs to absolute URLs
+                                if src.startswith('/'):
+                                    product_image_url = f"https://shop.amul.com{src}"
+                                elif src.startswith('http'):
+                                    product_image_url = src
+                                else:
+                                    product_image_url = f"https://shop.amul.com/{src}"
+                                break
+                    
+                    # Extract product ID from URL or data attribute
+                    product_id = None
+                    if product_page_url:
+                        if '/product/' in product_page_url:
+                            product_id = product_page_url.split('/product/')[-1].split('/')[0]
+                        elif '/en/product/' in product_page_url:
+                            product_id = product_page_url.split('/en/product/')[-1].split('/')[0]
                     
                     if not product_id:
                         # Generate a product ID from name if not found
@@ -235,15 +271,20 @@ class AmulScraper:
                     product = {
                         'productId': product_id,
                         'name': product_name,
+                        'productPageUrl': product_page_url,
+                        'productImageUrl': product_image_url,
                         'sold_out': sold_out
                     }
                     products.append(product)
+                    
                     
                 except Exception as e:
                     logger.error(f"Error processing product element: {e}")
                     continue
             
             logger.info(f"Successfully scraped {len(products)} products")
+            
+            
             return products
             
         except Exception as e:
