@@ -92,13 +92,13 @@ graph TB
     MONGODB --> PRODUCTS_MAH
     MONGODB --> PINCODES
 
-    %% Styling
-    classDef frontend fill:#e1f5fe
-    classDef backend fill:#f3e5f5
-    classDef scraper fill:#e8f5e8
-    classDef database fill:#fff3e0
-    classDef external fill:#ffebee
-    classDef queue fill:#f1f8e9
+    %% Styling - Light Theme
+    classDef frontend fill:#4fc3f7,stroke:#0277bd,stroke-width:2px,color:#000
+    classDef backend fill:#ab47bc,stroke:#6a1b9a,stroke-width:2px,color:#fff
+    classDef scraper fill:#66bb6a,stroke:#2e7d32,stroke-width:2px,color:#000
+    classDef database fill:#ffb74d,stroke:#ef6c00,stroke-width:2px,color:#000
+    classDef external fill:#ef5350,stroke:#c62828,stroke-width:2px,color:#fff
+    classDef queue fill:#aed581,stroke:#558b2f,stroke-width:2px,color:#000
 
     class REACT,COMPONENTS frontend
     class API,ROUTES,CONTROLLERS,EMAIL_SERVICE backend
