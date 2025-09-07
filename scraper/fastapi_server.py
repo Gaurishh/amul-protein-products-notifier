@@ -120,13 +120,13 @@ def trigger_scrape():
                 logging.info(f"Fetched {len(pincodes)} pincodes from backend: {pincodes}")
             else:
                 logging.warning("Backend returned no pincodes, using fallback")
-                pincodes = [110036, 122003, 560001]  # Fallback to hardcoded values
+                pincodes = [110036, 122003, 560001, 400001]  # Fallback to hardcoded values
         else:
             logging.error(f"Failed to fetch pincodes from backend, status: {response.status_code}")
-            pincodes = [110036, 122003, 560001]  # Fallback to hardcoded values
+            pincodes = [110036, 122003, 560001, 400001]  # Fallback to hardcoded values
     except Exception as e:
         logging.error(f"Error fetching pincodes from backend: {e}")
-        pincodes = [110036, 122003, 560001]  # Fallback to hardcoded values
+        pincodes = [110036, 122003, 560001, 400001]  # Fallback to hardcoded values
     
     jobs = []
     for pin in pincodes:
