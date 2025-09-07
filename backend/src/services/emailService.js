@@ -116,7 +116,7 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode, t
       }
     }
 
-    const subject = 'Subscription Confirmed - Amul Protein Products Restock Notifier';
+    const subject = 'Subscription Confirmed!';
 
     const body = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -167,7 +167,7 @@ export async function sendUnsubscribeConfirmation(email, productNames) {
       return false;
     }
 
-    const subject = 'Happy to see you go! - Amul Protein Products Restock Notifier';
+    const subject = 'Happy to see you go!';
 
     const body = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -219,7 +219,7 @@ export async function sendExpiryNotification(email, pincode) {
     const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'https://amul-protein-products-notifier.onrender.com';
     const resubscribeLink = `${FRONTEND_BASE_URL}`;
 
-    const subject = 'Subscription Expired - Amul Protein Products Notifier';
+    const subject = 'Subscription Expired';
 
     const body = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
