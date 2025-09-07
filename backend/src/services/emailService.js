@@ -80,7 +80,7 @@ export async function sendBulkStockNotification(subscriber, products, pincode, t
   }
 }
 
-export async function sendSubscriptionConfirmation(email, productIds, pincode, token) {
+export async function sendSubscriptionConfirmation(email, productIds, pincode, token, mongoose) {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       console.warn("Email credentials not configured. Skipping confirmation email.");
@@ -91,6 +91,31 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode, t
     const unsubscribeLink = `${FRONTEND_BASE_URL}/unsubscribe?token=${encodeURIComponent(token)}`;
     const editSubscriptionLink = `${FRONTEND_BASE_URL}/edit-subscription?token=${encodeURIComponent(token)}`;
 
+    // Fetch product names from database
+    let productNames = productIds;
+    if (mongoose) {
+      try {
+        const collectionName = `products_${pincode}`;
+        const products = await mongoose.connection.collection(collectionName).find(
+          { productId: { $in: productIds } },
+          { projection: { productId: 1, name: 1 } }
+        ).toArray();
+        
+        // Create a map of productId to name
+        const productMap = {};
+        products.forEach(product => {
+          productMap[product.productId] = product.name || product.productId;
+        });
+        
+        // Replace productIds with names, fallback to productId if name not found
+        productNames = productIds.map(id => productMap[id] || id);
+      } catch (error) {
+        console.error('Error fetching product names:', error);
+        // Fallback to productIds if database fetch fails
+        productNames = productIds;
+      }
+    }
+
     const subject = 'Subscription Confirmed - Amul Protein Products Restock Notifier';
 
     const body = `
@@ -99,7 +124,7 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode, t
         <p>Thank you for subscribing! You will be notified when your selected products are restocked.</p>
         <p><strong>You subscribed for:</strong></p>
         <ul>
-          ${productIds.map(id => `<li>Product ID: ${id}</li>`).join('')}
+          ${productNames.map(name => `<li>${name}</li>`).join('')}
         </ul>
         <p>🔗 <a href="https://shop.amul.com/en/browse/protein" style="color: #3498db;">Browse all protein products</a></p>
         <div style="margin: 30px 0;">

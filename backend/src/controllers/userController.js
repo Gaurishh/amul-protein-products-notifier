@@ -32,7 +32,7 @@ export async function subscribeUser(req, res) {
       { upsert: true }
     );
     // Send confirmation email (do not block response on error)
-    sendSubscriptionConfirmation(email, products, pincode, user.token).catch((err) => {
+    sendSubscriptionConfirmation(email, products, pincode, user.token, req.app.get('mongoose')).catch((err) => {
       console.error('Failed to send confirmation email:', err);
     });
     res.json({ message: 'Subscription saved', pincode });
