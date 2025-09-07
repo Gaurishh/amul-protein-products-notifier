@@ -19,7 +19,7 @@ export async function sendBulkStockNotification(subscriber, products, pincode, t
       return false;
     }
 
-    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL;
+    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'https://amul-protein-products-notifier.onrender.com';
     const unsubscribeLink = `${FRONTEND_BASE_URL}/unsubscribe?token=${encodeURIComponent(token)}`;
     const editSubscriptionLink = `${FRONTEND_BASE_URL}/edit-subscription?token=${encodeURIComponent(token)}`;
 
@@ -87,7 +87,7 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode, t
       return false;
     }
 
-    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL;
+    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'https://amul-protein-products-notifier.onrender.com';
     const unsubscribeLink = `${FRONTEND_BASE_URL}/unsubscribe?token=${encodeURIComponent(token)}`;
     const editSubscriptionLink = `${FRONTEND_BASE_URL}/edit-subscription?token=${encodeURIComponent(token)}`;
 
@@ -216,7 +216,7 @@ export async function sendExpiryNotification(email, pincode) {
       return false;
     }
 
-    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL;
+    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'https://amul-protein-products-notifier.onrender.com';
     const resubscribeLink = `${FRONTEND_BASE_URL}`;
 
     const subject = 'Subscription Expired - Amul Protein Products Notifier';
