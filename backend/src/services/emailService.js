@@ -160,6 +160,55 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode, t
   }
 }
 
+export async function sendUnsubscribeConfirmation(email, productNames) {
+  try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      console.warn("Email credentials not configured. Skipping unsubscribe confirmation email.");
+      return false;
+    }
+
+    const subject = 'Happy to see you go! - Amul Protein Products Restock Notifier';
+
+    const body = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2c3e50;">Successfully Unsubscribed</h2>
+        <p>What? Did you expect some "Sad to see you go email"? We are a non-profit service with load to manage on our servers.</p>
+        <p>Thanks for unsubscribing and helping us save resources.</p>
+        <p><strong>You were previously subscribed to:</strong></p>
+        <ul>
+          ${productNames.map(name => `<li>${name}</li>`).join('')}
+        </ul>
+        <p>You will no longer receive email notifications for these products.</p>
+        <p>🔗 <a href="https://shop.amul.com/en/browse/protein" style="color: #3498db;">Browse all protein products</a></p>
+        <div style="margin: 30px 0;">
+          <p>If you wish to resubscribe in the future, you can do so at any time by visiting our website.</p>
+          <a href="https://amul-protein-products-notifier.onrender.com" style="display: inline-block; padding: 10px 20px; background: #3498db; color: #fff; text-decoration: none; border-radius: 5px; margin: 10px 0;">Resubscribe</a>
+        </div>
+        <hr style="border: none; border-top: 1px solid #ecf0f1; margin: 30px 0;">
+        <p style="color: #7f8c8d; font-size: 12px;">
+          Best regards,<br>
+          Amul Protein Products Notifier
+        </p>
+      </div>
+    `;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: subject,
+      html: body
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`Unsubscribe confirmation email sent to ${email}`);
+    return true;
+
+  } catch (error) {
+    console.error(`Failed to send unsubscribe confirmation email to ${email}:`, error);
+    return false;
+  }
+}
+
 export async function sendExpiryNotification(email, pincode) {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
