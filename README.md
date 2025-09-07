@@ -413,40 +413,6 @@ node scripts/setup_databases.js
 - `GET /ping` - Ping endpoint
 - `GET /api/queue-status` - Queue status
 
-## 🔄 System Workflow
-
-### 1. User Subscription Flow
-
-1. User visits frontend and enters email
-2. User selects city and products
-3. Backend creates user record with unique token
-4. User added to product subscriber lists
-5. Confirmation email sent via queue
-
-### 2. Product Monitoring Flow
-
-1. Uptime Robot triggers scraper every 10 minutes
-2. Scraper fetches supported pincodes from backend
-3. Multiple scraping jobs queued for different pincodes
-4. **Scrape Worker Thread** processes jobs concurrently
-5. Selenium navigates to Amul website and enters pincode
-6. Products scraped and stock status detected
-7. **Backend Worker Thread** sends data to backend for processing
-
-### 3. Stock Change Detection
-
-1. Backend compares new data with existing records
-2. Identifies products that changed from sold-out to in-stock
-3. Queues email notification jobs for affected subscribers
-4. Email service processes queue and sends notifications
-
-### 4. Email Processing
-
-1. Bull queue manages email jobs
-2. Retry logic handles failed emails
-3. Rate limiting prevents spam
-4. Users receive notifications with unsubscribe/edit links
-
 ## 🎯 Key Features Explained
 
 ### Product Categorization
