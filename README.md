@@ -389,6 +389,7 @@ node scripts/setup_databases.js
 - `GET /api/user-by-token?token=:token` - Get user by token
 - `DELETE /api/unsubscribe?token=:token` - Unsubscribe by token
 - `PUT /api/edit-subscription?token=:token` - Edit subscription by token
+- `GET /api/users/count` - Get total number of users
 
 ### Product Management
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import EmailForm from '../components/EmailForm';
 import ProductSelector from '../components/ProductSelector';
 import SubscriptionManager from '../components/SubscriptionManager';
-import { checkUser, subscribeUser, unsubscribeUser, verifyPincode, trackPincode, checkUserByToken, unsubscribeUserByToken, getPincodes } from '../api';
+import { checkUser, subscribeUser, unsubscribeUser, verifyPincode, trackPincode, checkUserByToken, unsubscribeUserByToken, getPincodes, getUserCount } from '../api';
 import { useLocation } from 'react-router-dom';
 
 function useQuery() {
@@ -26,6 +26,30 @@ function HomePage({ unsubscribeMode, editMode }) {
   // Dynamic city to pincode mapping from backend
   const [cityPincodeMap, setCityPincodeMap] = useState({});
   const [pincodesLoading, setPincodesLoading] = useState(false);
+  
+  // User limit check
+  const [userLimitExceeded, setUserLimitExceeded] = useState(false);
+  const [userCountLoading, setUserCountLoading] = useState(true);
+
+  // Check user count when component mounts
+  useEffect(() => {
+    const checkUserCount = async () => {
+      try {
+        setUserCountLoading(true);
+        const response = await getUserCount();
+        if (response.success && response.userLimitExceeded) {
+          setUserLimitExceeded(true);
+        }
+      } catch (error) {
+        console.error('Error checking user count:', error);
+        // If API fails, don't block the user from using the app
+      } finally {
+        setUserCountLoading(false);
+      }
+    };
+
+    checkUserCount();
+  }, []);
 
   // Fetch pincodes from backend when component mounts
   useEffect(() => {
@@ -178,6 +202,27 @@ function HomePage({ unsubscribeMode, editMode }) {
         <img src="/amul-logo.png" alt="Amul Logo" className="amul-logo" onClick={goToEmailPage} style={{ cursor: 'pointer' }} />
         <h1 onClick={goToEmailPage} style={{ cursor: 'pointer' }}>Amul Protein Products Notifier</h1>
       </div>
+      
+      {/* User Limit Message */}
+      {userLimitExceeded && (
+        <div style={{
+          backgroundColor: '#fff3cd',
+          border: '1px solid #ffeaa7',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '20px',
+          color: '#856404',
+          textAlign: 'center'
+        }}>
+          <p style={{ margin: 0, fontSize: '16px', fontWeight: '500' }}>
+            We have exceeded the number of users we expected and need time to scale this app further.
+          </p>
+          <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>
+            Thanks for being so patient.
+          </p>
+        </div>
+      )}
+      
       {unsubscribeLoading && (
         <div className="confirmation-screen">
           <p>Unsubscribing you from notifications...</p>
@@ -194,10 +239,10 @@ function HomePage({ unsubscribeMode, editMode }) {
           </div>
         </div>
       )}
-      {!unsubscribeLoading && !editLoading && step === 'email' && (
+      {!unsubscribeLoading && !editLoading && step === 'email' && !userLimitExceeded && (
         <EmailForm onSubmit={handleEmailSubmit} />
       )}
-      {!unsubscribeLoading && !editLoading && step === 'pincode' && (
+      {!unsubscribeLoading && !editLoading && step === 'pincode' && !userLimitExceeded && (
         <div>
           <label>
             Select your city:
@@ -258,7 +303,7 @@ function HomePage({ unsubscribeMode, editMode }) {
           </div>
         </div>
       )}
-      {!unsubscribeLoading && !editLoading && step === 'products' && (
+      {!unsubscribeLoading && !editLoading && step === 'products' && !userLimitExceeded && (
         <div>
           <ProductSelector 
             selectedProducts={products} 
@@ -287,7 +332,7 @@ function HomePage({ unsubscribeMode, editMode }) {
           </div>
         </div>
       )}
-      {!unsubscribeLoading && !editLoading && step === 'manage' && user && (
+      {!unsubscribeLoading && !editLoading && step === 'manage' && user && !userLimitExceeded && (
         <SubscriptionManager
           email={email}
           user={user}
@@ -299,7 +344,7 @@ function HomePage({ unsubscribeMode, editMode }) {
           token={editMode ? query.get('token') : null}
         />
       )}
-      {!unsubscribeLoading && !editLoading && step === 'done' && (
+      {!unsubscribeLoading && !editLoading && step === 'done' && !userLimitExceeded && (
         <div className="confirmation-screen">
           <p>{message}</p>
           {user && email && (
@@ -310,7 +355,7 @@ function HomePage({ unsubscribeMode, editMode }) {
           )}
         </div>
       )}
-      {!unsubscribeLoading && !editLoading && step === 'unsubscribed' && (
+      {!unsubscribeLoading && !editLoading && step === 'unsubscribed' && !userLimitExceeded && (
         <div className="confirmation-screen">
           <p>{message}</p>
           <div className="button-group" style={{ marginTop: '1.5em' }}>
@@ -318,7 +363,7 @@ function HomePage({ unsubscribeMode, editMode }) {
           </div>
         </div>
       )}
-      {!unsubscribeLoading && !editLoading && message && step !== 'done' && step !== 'unsubscribed' && <div style={{ color: 'green', marginTop: 10 }}>{message}</div>}
+      {!unsubscribeLoading && !editLoading && message && step !== 'done' && step !== 'unsubscribed' && !userLimitExceeded && <div style={{ color: 'green', marginTop: 10 }}>{message}</div>}
     </div>
   );
 }

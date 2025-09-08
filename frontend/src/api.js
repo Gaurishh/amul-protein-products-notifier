@@ -101,3 +101,9 @@ export async function verifyPincodePassword(password) {
   });
   return res.json();
 }
+
+// Get user count API function
+export async function getUserCount() {
+  const res = await fetch(`${API_BASE}/users/count`);
+  return res.json();
+}

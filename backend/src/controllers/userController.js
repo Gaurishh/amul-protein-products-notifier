@@ -203,3 +203,23 @@ export async function getUserByToken(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+// GET /users/count - Get total number of users and user limit status
+export async function getUserCount(req, res) {
+  try {
+    const userCount = await User.countDocuments();
+    const userLimitExceeded = userCount > 80;
+    
+    res.json({
+      success: true,
+      totalUsers: userCount,
+      userLimitExceeded: userLimitExceeded,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+}
