@@ -119,7 +119,12 @@ function HomePage({ unsubscribeMode, editMode }) {
     const userData = await checkUser(emailInput);
     if (userData) {
       setUser(userData);
-      setStep('manage');
+      // Check if email is verified
+      if (userData.emailVerified) {
+        setStep('manage');
+      } else {
+        setStep('unverified');
+      }
     } else {
       setStep('pincode');
     }
@@ -343,6 +348,14 @@ function HomePage({ unsubscribeMode, editMode }) {
           onEditingMount={() => setForceEdit(false)}
           token={editMode ? query.get('token') : null}
         />
+      )}
+      {!unsubscribeLoading && !editLoading && step === 'unverified' && user && !userLimitExceeded && (
+        <div className="confirmation-screen">
+          <p>Please check your inbox and verify your email in order to receive notifications.</p>
+          <div className="button-group" style={{ marginTop: '1.5em' }}>
+            <button onClick={goToEmailPage}>Enter Different Email</button>
+          </div>
+        </div>
       )}
       {!unsubscribeLoading && !editLoading && step === 'done' && !userLimitExceeded && (
         <div className="confirmation-screen">
