@@ -12,6 +12,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// console.log(process.env.FRONTEND_BASE_URL);
+
 export async function sendBulkStockNotification(subscriber, products, pincode, token) {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
@@ -19,9 +21,7 @@ export async function sendBulkStockNotification(subscriber, products, pincode, t
       return false;
     }
 
-    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL && !process.env.FRONTEND_BASE_URL.includes('localhost') 
-      ? process.env.FRONTEND_BASE_URL 
-      : 'https://amul-protein-products-notifier.onrender.com';
+    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
     const unsubscribeLink = `${FRONTEND_BASE_URL}/unsubscribe?token=${encodeURIComponent(token)}`;
     const editSubscriptionLink = `${FRONTEND_BASE_URL}/edit-subscription?token=${encodeURIComponent(token)}`;
 
@@ -82,6 +82,46 @@ export async function sendBulkStockNotification(subscriber, products, pincode, t
   }
 }
 
+export async function sendEmailVerification(email, token) {
+  try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      console.warn("Email credentials not configured. Skipping verification email.");
+      return false;
+    }
+
+    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+    const verifyLink = `${FRONTEND_BASE_URL}/verify-email?token=${encodeURIComponent(token)}`;
+
+    const subject = 'Verify your email to activate notifications';
+
+    const body = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2c3e50;">Verify your email</h2>
+        <p>Click the button below to verify your email and activate your notifications.</p>
+        <div style="margin: 30px 0;">
+          <a href="${verifyLink}" style="display: inline-block; padding: 10px 20px; background: #3498db; color: #fff; text-decoration: none; border-radius: 5px; margin: 10px 0;">Verify Email</a>
+        </div>
+        <p style="color: #7f8c8d; font-size: 12px;">If you did not request this, you can ignore this email.</p>
+      </div>
+    `;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: subject,
+      html: body
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Verification email sent to ${email}`);
+    return true;
+
+  } catch (error) {
+    console.error(`Failed to send verification email to ${email}:`, error);
+    return false;
+  }
+}
+
 export async function sendSubscriptionConfirmation(email, productIds, pincode, token, mongoose) {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
@@ -89,9 +129,7 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode, t
       return false;
     }
 
-    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL && !process.env.FRONTEND_BASE_URL.includes('localhost') 
-      ? process.env.FRONTEND_BASE_URL 
-      : 'https://amul-protein-products-notifier.onrender.com';
+    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
     const unsubscribeLink = `${FRONTEND_BASE_URL}/unsubscribe?token=${encodeURIComponent(token)}`;
     const editSubscriptionLink = `${FRONTEND_BASE_URL}/edit-subscription?token=${encodeURIComponent(token)}`;
 
@@ -173,6 +211,8 @@ export async function sendUnsubscribeConfirmation(email, productNames) {
 
     const subject = 'Happy to see you go!';
 
+    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+
     const body = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2c3e50;">Successfully Unsubscribed</h2>
@@ -186,7 +226,7 @@ export async function sendUnsubscribeConfirmation(email, productNames) {
         <p>🔗 <a href="https://shop.amul.com/en/browse/protein" style="color: #3498db;">Browse all protein products</a></p>
         <div style="margin: 30px 0;">
           <p>If you wish to resubscribe in the future, you can do so at any time by visiting our website.</p>
-          <a href="https://amul-protein-products-notifier.onrender.com" style="display: inline-block; padding: 10px 20px; background: #3498db; color: #fff; text-decoration: none; border-radius: 5px; margin: 10px 0;">Resubscribe</a>
+          <a href="${FRONTEND_BASE_URL}" style="display: inline-block; padding: 10px 20px; background: #3498db; color: #fff; text-decoration: none; border-radius: 5px; margin: 10px 0;">Resubscribe</a>
         </div>
         <hr style="border: none; border-top: 1px solid #ecf0f1; margin: 30px 0;">
         <p style="color: #7f8c8d; font-size: 12px;">
@@ -220,9 +260,7 @@ export async function sendExpiryNotification(email, pincode) {
       return false;
     }
 
-    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL && !process.env.FRONTEND_BASE_URL.includes('localhost') 
-      ? process.env.FRONTEND_BASE_URL 
-      : 'https://amul-protein-products-notifier.onrender.com';
+    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
     const resubscribeLink = `${FRONTEND_BASE_URL}`;
 
     const subject = 'Subscription Expired';

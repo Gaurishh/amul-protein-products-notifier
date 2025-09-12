@@ -142,7 +142,7 @@ function HomePage({ unsubscribeMode, editMode }) {
     await subscribeUser(email, products, pincodeToSend);
     const userData = await checkUser(email);
     setUser(userData);
-    setMessage('Subscription saved! You will be notified when products are restocked.');
+    setMessage('Verification email sent. Please verify your email to start receiving notifications.');
     setStep('done');
     setLoading(false);
   };

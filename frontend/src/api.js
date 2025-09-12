@@ -54,6 +54,11 @@ export async function checkUserByToken(token) {
   return res.json();
 }
 
+export async function verifyEmailByToken(token) {
+  const res = await fetch(`${API_BASE}/verify-email?token=${encodeURIComponent(token)}`);
+  return res.json();
+}
+
 export async function unsubscribeUserByToken(token) {
   const res = await fetch(`${API_BASE}/unsubscribe?token=${encodeURIComponent(token)}`, {
     method: 'DELETE',

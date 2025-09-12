@@ -64,6 +64,11 @@ processQueue.process('send_stock_notification', async (job) => {
       throw new Error(`User not found for email: ${subscriber}`);
     }
     
+    if (!user.emailVerified) {
+      console.log(`Skipping stock email for unverified user: ${subscriber}`);
+      return { success: true, subscriber, skipped: true, reason: 'unverified' };
+    }
+    
     const result = await sendBulkStockNotification(subscriber, products, pincode, user.token);
     
     if (result) {
@@ -250,6 +255,49 @@ processQueue.process('process_unsubscribe_by_token', async (job) => {
     
   } catch (error) {
     console.error(`Error processing unsubscribe by token job:`, error);
+    throw error;
+  }
+});
+
+// Process email verification jobs
+processQueue.process('process_email_verification', async (job) => {
+  const { token } = job.data;
+  try {
+    console.log(`Processing email verification for token ${token}`);
+    const user = await User.findOne({ token });
+    if (!user) {
+      throw new Error('Invalid or expired token');
+    }
+    if (!user.emailVerified) {
+      user.emailVerified = true;
+      // Clear TTL so verified users are not deleted
+      user.expiresAt = null;
+      await user.save();
+
+      // Add user to product subscribers in the correct pincode collection
+      const collectionName = `products_${user.pincode}`;
+      for (const productId of user.products) {
+        await mongoose.connection.collection(collectionName).updateOne(
+          { productId },
+          { $addToSet: { subscribers: user.email } },
+          { upsert: true }
+        );
+      }
+
+      // Track pincode interaction (update lastInteracted)
+      const now = new Date();
+      await mongoose.connection.collection('pincodes').updateOne(
+        { pincode: user.pincode },
+        { $set: { lastInteracted: now } },
+        { upsert: true }
+      );
+
+      // Send confirmation email
+      await sendSubscriptionConfirmation(user.email, user.products, user.pincode, user.token, mongoose);
+    }
+    return { success: true, email: user.email };
+  } catch (error) {
+    console.error('Error processing email verification job:', error);
     throw error;
   }
 });

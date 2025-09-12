@@ -202,3 +202,26 @@ export async function clearQueue() {
 }
 
 export { processQueue };
+
+// Email verification job
+export async function enqueueEmailVerificationJob(token) {
+  try {
+    const job = await processQueue.add('process_email_verification', {
+      type: 'process_email_verification',
+      token,
+    }, {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 2000
+      },
+      removeOnComplete: 100,
+      removeOnFail: 50
+    });
+    console.log('Enqueued email verification job');
+    return job;
+  } catch (error) {
+    console.error('Error enqueueing email verification job:', error);
+    throw error;
+  }
+}

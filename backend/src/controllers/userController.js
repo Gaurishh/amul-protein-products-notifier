@@ -1,6 +1,6 @@
 import User from '../models/User.js';
-import { sendSubscriptionConfirmation, sendUnsubscribeConfirmation } from '../services/emailService.js';
-import { enqueueSubscriptionJob, enqueueUnsubscribeJob, enqueueUnsubscribeByTokenJob } from '../services/emailQueue.js';
+import { sendSubscriptionConfirmation, sendUnsubscribeConfirmation, sendEmailVerification } from '../services/emailService.js';
+import { enqueueSubscriptionJob, enqueueUnsubscribeJob, enqueueUnsubscribeByTokenJob, enqueueEmailVerificationJob } from '../services/emailQueue.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // POST /subscribe
@@ -15,20 +15,25 @@ export async function subscribeUser(req, res) {
       return res.status(400).json({ error: 'User already exists' });
     }
     
-    // Create user with token
-    user = new User({ email, products, pincode, token: uuidv4() });
+    // Create user with token and unverified email; auto-expire in 5 minutes
+    user = new User({
+      email,
+      products,
+      pincode,
+      token: uuidv4(),
+      emailVerified: false,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000)
+    });
     await user.save();
     
-    // Enqueue subscription processing job for immediate response
-    enqueueSubscriptionJob(email, products, pincode, user.token).catch((err) => {
-      console.error('Failed to enqueue subscription job:', err);
-    });
+    // Send verification email instead of immediate processing
+    await sendEmailVerification(email, user.token);
     
     // Return immediate response
     res.json({ 
-      message: 'Subscription queued for processing', 
+      message: 'Verification email sent. Please verify to activate notifications.', 
       pincode,
-      status: 'processing'
+      status: 'verification_pending'
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -199,6 +204,23 @@ export async function getUserByToken(req, res) {
     const user = await User.findOne({ token });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET /verify-email?token=...
+export async function verifyEmail(req, res) {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: 'Missing token' });
+  try {
+    const user = await User.findOne({ token });
+    if (!user) return res.status(404).json({ error: 'Invalid or expired token' });
+
+    // Enqueue verification to process asynchronously
+    await enqueueEmailVerificationJob(token);
+
+    return res.json({ success: true, status: 'queued', message: 'Email verification queued' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
