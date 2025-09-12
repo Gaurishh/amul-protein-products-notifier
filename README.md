@@ -73,7 +73,65 @@ _System Architecture showing the interaction between Frontend, Backend, Scraper,
 
 ### From Backend Perspective
 
-#### 1. **Scraper System (Python/FastAPI)**
+#### 1. **Email Verification System**
+
+**Two-Step Verification Process:**
+
+1. **Initial Subscription (Unverified State):**
+
+   - User subscribes with email, products, and pincode
+   - User record created in MongoDB with `emailVerified: false`
+   - **TTL (Time To Live) Mechanism**: Document automatically expires after 5 minutes if not verified
+   - Verification email queued and sent asynchronously via Redis Bull Queue
+   - User receives "Verification email sent" confirmation immediately
+
+2. **Email Verification (Verified State):**
+   - User clicks verification link in their email
+   - Link contains unique token for security
+   - Backend processes verification asynchronously via queue
+   - User record updated: `emailVerified: true`
+   - **TTL Cleared**: `expiresAt` set to `null` to prevent auto-deletion
+   - User added to product subscriber lists
+   - Confirmation email sent with subscription details
+
+**TTL (Time To Live) Security Features:**
+
+- **Automatic Cleanup**: Unverified subscriptions are automatically deleted after 5 minutes
+- **MongoDB Index**: TTL index on `expiresAt` field with `expireAfterSeconds: 0`
+- **Security Benefit**: Prevents database bloat from incomplete subscriptions
+- **User Experience**: Encourages prompt email verification
+- **Resource Management**: Ensures only verified users consume system resources
+
+**Queue-Based Email Processing:**
+
+- **`send_email_verification`**: Sends initial verification email (non-blocking)
+- **`process_email_verification`**: Processes verification completion when link is clicked
+- **Asynchronous Processing**: All email operations handled via Redis Bull Queue
+- **Retry Logic**: Failed email jobs automatically retried (3 attempts with exponential backoff)
+- **Error Handling**: Comprehensive logging for failed verification attempts
+
+**Database Schema for Verification:**
+
+```javascript
+{
+  email: String (required, unique),
+  products: [String] (required),
+  pincode: String (required),
+  token: String (required, unique), // UUID for secure links
+  emailVerified: Boolean (default: false),
+  expiresAt: Date (default: null) // TTL field for auto-expiration
+}
+```
+
+**Security Considerations:**
+
+- **Unique Tokens**: Each user gets a unique UUID token for verification links
+- **Token-based Access**: Verification links are only accessible with valid tokens
+- **Time-limited**: Verification must be completed within 5 minutes
+- **Auto-cleanup**: Unverified entries are automatically removed
+- **No Email Spam**: Only verified users receive product notifications
+
+#### 2. **Scraper System (Python/FastAPI)**
 
 **Automated Monitoring Process:**
 
@@ -114,7 +172,9 @@ _System Architecture showing the interaction between Frontend, Backend, Scraper,
 1. **Redis Bull Queue**: Manages all asynchronous operations
 2. **Job Types**:
    - `send_stock_notification` - Notify users of restocked products
-   - `process_subscription` - Handle new user subscriptions
+   - `send_email_verification` - Send verification emails to new subscribers
+   - `process_email_verification` - Process email verification completion
+   - `process_subscription` - Handle new user subscriptions (legacy)
    - `process_unsubscribe` - Process user unsubscriptions
    - `process_unsubscribe_by_token` - Handle token-based unsubscriptions
    - `send_expiry_notification` - Notify users when pincodes are deleted
@@ -382,7 +442,8 @@ node scripts/setup_databases.js
 
 ### User Management
 
-- `POST /api/subscribe` - Subscribe to products
+- `POST /api/subscribe` - Subscribe to products (requires email verification)
+- `GET /api/verify-email?token=:token` - Verify email address with token
 - `GET /api/user/:email` - Get user details
 - `PUT /api/user/:email` - Update user subscription
 - `DELETE /api/user/:email` - Unsubscribe user
@@ -439,7 +500,9 @@ Products are automatically categorized based on keywords:
 - **Redis Bull Queue** manages email processing
 - **Job Types**:
   - `send_stock_notification` - Notify users of restocked products
-  - `process_subscription` - Process new user subscriptions
+  - `send_email_verification` - Send verification emails to new subscribers
+  - `process_email_verification` - Process email verification completion
+  - `process_subscription` - Process new user subscriptions (legacy)
   - `process_unsubscribe` - Handle user unsubscriptions
   - `process_unsubscribe_by_token` - Token-based unsubscriptions
   - `send_expiry_notification` - Notify users of subscription expiry
@@ -455,10 +518,23 @@ Products are automatically categorized based on keywords:
 
 ### Database Models
 
-- **User Model**: Email, products, pincode, and unique token for secure management
+- **User Model**: Email, products, pincode, unique token, email verification status, and TTL expiration
 - **Product Model**: Product ID, name, subscribers list, and last updated timestamp
 - **Pincode Model**: Pincode, state, and last interaction tracking
 - **Password Model**: Bcrypt-hashed admin password for pincode management
+
+**User Model Schema:**
+
+```javascript
+{
+  email: String (required, unique),
+  products: [String] (required),
+  pincode: String (required),
+  token: String (required, unique), // UUID for secure verification links
+  emailVerified: Boolean (default: false),
+  expiresAt: Date (default: null) // TTL field for auto-expiration
+}
+```
 
 ### Admin Interface
 
