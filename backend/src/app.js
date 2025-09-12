@@ -6,7 +6,7 @@ import productRoutes from './routes/product.js';
 import stockRoutes from './routes/stock.js';
 import pincodeRoutes from './routes/pincodes.js';
 import { processQueue, getQueueStatus } from './services/emailQueue.js';
-import { sendBulkStockNotification, sendExpiryNotification, sendSubscriptionConfirmation, sendUnsubscribeConfirmation } from './services/emailService.js';
+import { sendBulkStockNotification, sendExpiryNotification, sendSubscriptionConfirmation, sendUnsubscribeConfirmation, sendEmailVerification } from './services/emailService.js';
 import User from './models/User.js';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -259,7 +259,31 @@ processQueue.process('process_unsubscribe_by_token', async (job) => {
   }
 });
 
-// Process email verification jobs
+// Process email verification jobs - just sends the verification email
+processQueue.process('send_email_verification', async (job) => {
+  const { token } = job.data;
+  try {
+    console.log(`Sending email verification for token ${token}`);
+    const user = await User.findOne({ token });
+    if (!user) {
+      throw new Error('Invalid or expired token');
+    }
+    
+    // Send verification email
+    const result = await sendEmailVerification(user.email, token);
+    if (result) {
+      console.log(`Successfully sent verification email to ${user.email}`);
+      return { success: true, email: user.email };
+    } else {
+      throw new Error(`Failed to send verification email to ${user.email}`);
+    }
+  } catch (error) {
+    console.error('Error processing email verification job:', error);
+    throw error;
+  }
+});
+
+// Process email verification completion - when user clicks verification link
 processQueue.process('process_email_verification', async (job) => {
   const { token } = job.data;
   try {

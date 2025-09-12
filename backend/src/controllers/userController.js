@@ -1,6 +1,6 @@
 import User from '../models/User.js';
 import { sendSubscriptionConfirmation, sendUnsubscribeConfirmation, sendEmailVerification } from '../services/emailService.js';
-import { enqueueSubscriptionJob, enqueueUnsubscribeJob, enqueueUnsubscribeByTokenJob, enqueueEmailVerificationJob } from '../services/emailQueue.js';
+import { enqueueSubscriptionJob, enqueueUnsubscribeJob, enqueueUnsubscribeByTokenJob, enqueueEmailVerificationJob, enqueueEmailVerificationCompletionJob } from '../services/emailQueue.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // POST /subscribe
@@ -26,8 +26,10 @@ export async function subscribeUser(req, res) {
     });
     await user.save();
     
-    // Send verification email instead of immediate processing
-    await sendEmailVerification(email, user.token);
+    // Enqueue verification email for immediate response
+    enqueueEmailVerificationJob(user.token).catch((err) => {
+      console.error('Failed to enqueue email verification job:', err);
+    });
     
     // Return immediate response
     res.json({ 
@@ -217,8 +219,10 @@ export async function verifyEmail(req, res) {
     const user = await User.findOne({ token });
     if (!user) return res.status(404).json({ error: 'Invalid or expired token' });
 
-    // Enqueue verification to process asynchronously
-    await enqueueEmailVerificationJob(token);
+    // Enqueue verification completion to process asynchronously
+    enqueueEmailVerificationCompletionJob(token).catch((err) => {
+      console.error('Failed to enqueue email verification completion job:', err);
+    });
 
     return res.json({ success: true, status: 'queued', message: 'Email verification queued' });
   } catch (err) {

@@ -203,11 +203,11 @@ export async function clearQueue() {
 
 export { processQueue };
 
-// Email verification job
+// Email verification job - just sends the verification email
 export async function enqueueEmailVerificationJob(token) {
   try {
-    const job = await processQueue.add('process_email_verification', {
-      type: 'process_email_verification',
+    const job = await processQueue.add('send_email_verification', {
+      type: 'send_email_verification',
       token,
     }, {
       attempts: 3,
@@ -222,6 +222,29 @@ export async function enqueueEmailVerificationJob(token) {
     return job;
   } catch (error) {
     console.error('Error enqueueing email verification job:', error);
+    throw error;
+  }
+}
+
+// Process email verification completion - when user clicks verification link
+export async function enqueueEmailVerificationCompletionJob(token) {
+  try {
+    const job = await processQueue.add('process_email_verification', {
+      type: 'process_email_verification',
+      token,
+    }, {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 2000
+      },
+      removeOnComplete: 100,
+      removeOnFail: 50
+    });
+    console.log('Enqueued email verification completion job');
+    return job;
+  } catch (error) {
+    console.error('Error enqueueing email verification completion job:', error);
     throw error;
   }
 }
