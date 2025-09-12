@@ -167,7 +167,7 @@ graph TB
 - **Delhi** (110036)
 - **Haryana** (122003)
 - **Karnataka** (560001)
-- **Maharashtra** (400001)
+- **Mumbai** (400001)
 
 ## Technology Stack
 
