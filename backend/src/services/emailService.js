@@ -1,44 +1,59 @@
 import nodemailer from 'nodemailer';
+import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create transporter with production-ready configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
+// Create SES client
+const sesClient = new SESv2Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
-  // Connection timeout settings
-  connectionTimeout: 60000, // 60 seconds
-  greetingTimeout: 30000,   // 30 seconds
-  socketTimeout: 60000,     // 60 seconds
-  // Retry and pooling settings
-  pool: true,
-  maxConnections: 3,
-  maxMessages: 50,
-  rateLimit: 10, // max 10 messages per second
 });
 
-// Test connection on startup
+// Create SES transporter using nodemailer
+const transporter = nodemailer.createTransport({
+  SES: { sesClient, SendEmailCommand }
+});
+
+// Test SES connection on startup
 transporter.verify((error, success) => {
   if (error) {
-    console.error('SMTP connection error:', error);
+    console.error('AWS SES connection error:', error);
   } else {
-    console.log('SMTP server is ready to take our messages');
+    console.log('AWS SES is ready to send emails');
   }
 });
 
-// console.log(process.env.FRONTEND_BASE_URL);
+// Helper function to send email via AWS SES
+async function sendEmailViaSES(to, subject, htmlContent, fromEmail = null) {
+  try {
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+      throw new Error('AWS SES credentials not configured');
+    }
+
+    const mailOptions = {
+      from: fromEmail || process.env.FROM_EMAIL || process.env.EMAIL_USER,
+      to: to,
+      subject: subject,
+      html: htmlContent
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`Email sent successfully via AWS SES. Message ID: ${result.messageId}`);
+    return result;
+  } catch (error) {
+    console.error('Failed to send email via AWS SES:', error);
+    throw error;
+  }
+}
 
 export async function sendBulkStockNotification(subscriber, products, pincode, token) {
   try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-      console.warn("Email credentials not configured. Skipping email notification.");
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+      console.warn("AWS SES credentials not configured. Skipping email notification.");
       return false;
     }
 
@@ -60,7 +75,7 @@ export async function sendBulkStockNotification(subscriber, products, pincode, t
       ? `🎉 ${products[0].name} is back in stock!`
       : `🎉 ${products.length} products are back in stock!`;
 
-    const body = `
+    const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2c3e50;">Products Back in Stock!</h2>
         <p>Hello!</p>
@@ -86,27 +101,20 @@ export async function sendBulkStockNotification(subscriber, products, pincode, t
       </div>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: subscriber,
-      subject: subject,
-      html: body
-    };
-
-    const result = await transporter.sendMail(mailOptions);
-    console.log(`Email sent to ${subscriber} for ${products.length} products`);
+    await sendEmailViaSES(subscriber, subject, htmlContent);
+    console.log(`Stock notification email sent to ${subscriber} for ${products.length} products`);
     return true;
 
   } catch (error) {
-    console.error(`Failed to send email to ${subscriber}:`, error);
+    console.error(`Failed to send stock notification to ${subscriber}:`, error);
     return false;
   }
 }
 
 export async function sendEmailVerification(email, token) {
   try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-      console.warn("Email credentials not configured. Skipping verification email.");
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+      console.warn("AWS SES credentials not configured. Skipping verification email.");
       return false;
     }
 
@@ -115,10 +123,11 @@ export async function sendEmailVerification(email, token) {
 
     const subject = 'Verify your email to activate notifications';
 
-    const body = `
+    const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2c3e50;">Verify your email</h2>
         <p>Click the button below to verify your email and activate your notifications.</p>
+        <p style="color: #e74c3c; font-weight: bold; margin: 15px 0;">⚠️ Important: This verification link is valid for 5 minutes only.</p>
         <div style="margin: 30px 0;">
           <a href="${verifyLink}" style="display: inline-block; padding: 10px 20px; background: #3498db; color: #fff; text-decoration: none; border-radius: 5px; margin: 10px 0;">Verify Email</a>
         </div>
@@ -126,14 +135,7 @@ export async function sendEmailVerification(email, token) {
       </div>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: subject,
-      html: body
-    };
-
-    await transporter.sendMail(mailOptions);
+    await sendEmailViaSES(email, subject, htmlContent);
     console.log(`Verification email sent to ${email}`);
     return true;
 
@@ -145,8 +147,8 @@ export async function sendEmailVerification(email, token) {
 
 export async function sendSubscriptionConfirmation(email, productIds, pincode, token, mongoose) {
   try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-      console.warn("Email credentials not configured. Skipping confirmation email.");
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+      console.warn("AWS SES credentials not configured. Skipping confirmation email.");
       return false;
     }
 
@@ -181,7 +183,7 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode, t
 
     const subject = 'Subscription Confirmed!';
 
-    const body = `
+    const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2c3e50;">Subscription Confirmed!</h2>
         <p>Thank you for subscribing! You will be notified when your selected products are restocked.</p>
@@ -206,15 +208,8 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode, t
       </div>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: subject,
-      html: body
-    };
-
-    const result = await transporter.sendMail(mailOptions);
-    console.log(`Confirmation email sent to ${email}`);
+    await sendEmailViaSES(email, subject, htmlContent);
+    console.log(`Subscription confirmation email sent to ${email}`);
     return true;
 
   } catch (error) {
@@ -225,8 +220,8 @@ export async function sendSubscriptionConfirmation(email, productIds, pincode, t
 
 export async function sendUnsubscribeConfirmation(email, productNames) {
   try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-      console.warn("Email credentials not configured. Skipping unsubscribe confirmation email.");
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+      console.warn("AWS SES credentials not configured. Skipping unsubscribe confirmation email.");
       return false;
     }
 
@@ -234,7 +229,7 @@ export async function sendUnsubscribeConfirmation(email, productNames) {
 
     const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
 
-    const body = `
+    const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2c3e50;">Successfully Unsubscribed</h2>
         <p>What? Did you expect some "Sad to see you go email"? We are a non-profit service with load to manage on our servers.</p>
@@ -257,14 +252,7 @@ export async function sendUnsubscribeConfirmation(email, productNames) {
       </div>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: subject,
-      html: body
-    };
-
-    const result = await transporter.sendMail(mailOptions);
+    await sendEmailViaSES(email, subject, htmlContent);
     console.log(`Unsubscribe confirmation email sent to ${email}`);
     return true;
 
@@ -276,8 +264,8 @@ export async function sendUnsubscribeConfirmation(email, productNames) {
 
 export async function sendExpiryNotification(email, pincode) {
   try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-      console.warn("Email credentials not configured. Skipping expiry notification email.");
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+      console.warn("AWS SES credentials not configured. Skipping expiry notification email.");
       return false;
     }
 
@@ -286,7 +274,7 @@ export async function sendExpiryNotification(email, pincode) {
 
     const subject = 'Subscription Expired';
 
-    const body = `
+    const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #e74c3c;">Subscription Expired</h2>
         <p>Hello,</p>
@@ -303,14 +291,7 @@ export async function sendExpiryNotification(email, pincode) {
       </div>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: subject,
-      html: body
-    };
-
-    const result = await transporter.sendMail(mailOptions);
+    await sendEmailViaSES(email, subject, htmlContent);
     console.log(`Expiry notification email sent to ${email}`);
     return true;
 
@@ -318,4 +299,4 @@ export async function sendExpiryNotification(email, pincode) {
     console.error(`Failed to send expiry notification email to ${email}:`, error);
     return false;
   }
-} 
+}

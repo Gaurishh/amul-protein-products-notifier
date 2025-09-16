@@ -351,6 +351,7 @@ function HomePage({ unsubscribeMode, editMode }) {
       )}
       {!unsubscribeLoading && !editLoading && step === 'unverified' && user && !userLimitExceeded && (
         <div className="confirmation-screen">
+          <h2 style={{ color: '#000000', fontWeight: 'bold', marginBottom: '1rem' }}>Email Verification Pending</h2>
           <p>Please check your inbox and verify your email in order to receive notifications.</p>
           <div className="button-group" style={{ marginTop: '1.5em' }}>
             <button onClick={goToEmailPage}>Enter Different Email</button>

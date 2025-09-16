@@ -8,6 +8,7 @@
     "dev": "nodemon src/app.js"
   },
   "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.888.0",
     "bcrypt": "^6.0.0",
     "bull": "^4.0.0",
     "cors": "^2.8.5",

@@ -1,6 +1,11 @@
-EMAIL_USER=
-EMAIL_PASSWORD=
-MONGO_URI=
-FRONTEND_BASE_URL=
-REDIS_URL=
-PORT= 
+# AWS SES Configuration
+AWS_ACCESS_KEY_ID=your-access-key-id
+AWS_SECRET_ACCESS_KEY=your-secret-access-key
+AWS_REGION=us-east-1
+FROM_EMAIL=noreply@gaurish.us.kg
+
+# Database and Application Configuration
+MONGO_URI=your-mongodb-connection-string
+FRONTEND_BASE_URL=https://your-frontend-domain.com
+REDIS_URL=your-redis-connection-string
+PORT=8000
