@@ -116,17 +116,29 @@ function HomePage({ unsubscribeMode, editMode }) {
 
   const handleEmailSubmit = async ({ email: emailInput }) => {
     setEmail(emailInput);
-    const userData = await checkUser(emailInput);
-    if (userData) {
-      setUser(userData);
-      // Check if email is verified
-      if (userData.emailVerified) {
-        setStep('manage');
+    try {
+      const userData = await checkUser(emailInput);
+      if (userData) {
+        setUser(userData);
+        // Check if user recently unsubscribed
+        if (userData.recentlyUnsubscribed) {
+          setMessage('Recently unsubscribed users must wait 24 hours before subscribing again');
+          setStep('email'); // Stay on email step to show warning
+          return;
+        }
+        // Check if email is verified
+        if (userData.emailVerified) {
+          setStep('manage');
+        } else {
+          setStep('unverified');
+        }
       } else {
-        setStep('unverified');
+        setStep('pincode');
       }
-    } else {
-      setStep('pincode');
+    } catch (error) {
+      console.error('Error checking user:', error);
+      setMessage('Error checking user status. Please try again.');
+      setStep('email');
     }
   };
 
@@ -144,12 +156,18 @@ function HomePage({ unsubscribeMode, editMode }) {
     
     const pincodeToSend = cityPincodeMap[city];
     
-    await subscribeUser(email, products, pincodeToSend);
-    const userData = await checkUser(email);
-    setUser(userData);
-    setMessage('Verification email sent. Please verify your email to start receiving notifications.');
-    setStep('done');
-    setLoading(false);
+    try {
+      await subscribeUser(email, products, pincodeToSend);
+      const userData = await checkUser(email);
+      setUser(userData);
+      setMessage('Verification email sent. Please verify your email to start receiving notifications.');
+      setStep('done');
+    } catch (error) {
+      setMessage('Error subscribing. Please try again.');
+      console.error('Subscription error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpdate = async () => {

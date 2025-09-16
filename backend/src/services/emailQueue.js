@@ -49,7 +49,8 @@ export async function enqueueEmailJobs(restockedProducts, pincode, app) {
         subscriber,
         products: products.map(p => ({ 
           productId: p.productId, 
-          name: p.name 
+          name: p.name,
+          productPageUrl: p.productPageUrl || null
         })),
         pincode
       }, {
@@ -229,8 +230,8 @@ export async function enqueueEmailVerificationJob(token) {
 // Process email verification completion - when user clicks verification link
 export async function enqueueEmailVerificationCompletionJob(token) {
   try {
-    const job = await processQueue.add('process_email_verification', {
-      type: 'process_email_verification',
+    const job = await processQueue.add('process_email_verification_completion', {
+      type: 'process_email_verification_completion',
       token,
     }, {
       attempts: 3,

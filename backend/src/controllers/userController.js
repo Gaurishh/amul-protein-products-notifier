@@ -48,7 +48,16 @@ export async function getUser(req, res) {
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json(user);
+    
+    // Return user data with recentlyUnsubscribed status
+    res.json({
+      email: user.email,
+      products: user.products,
+      pincode: user.pincode,
+      emailVerified: user.emailVerified,
+      recentlyUnsubscribed: user.recentlyUnsubscribed || false,
+      expiresAt: user.expiresAt
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -142,8 +151,25 @@ export async function unsubscribeByToken(req, res) {
       pincode: user.pincode
     };
     
-    // Delete user immediately
-    await User.findOneAndDelete({ token });
+    // Use findOneAndUpdate to set recentlyUnsubscribed flag and expiresAt instead of deleting
+    const updateResult = await User.findOneAndUpdate(
+      { token, emailVerified: { $exists: true } }, // Only update if user exists and has emailVerified field
+      { 
+        $set: { 
+          recentlyUnsubscribed: true,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
+        }
+      },
+      { new: false } // Return the original document
+    );
+    
+    if (!updateResult) {
+      // User was already processed or doesn't exist
+      return res.json({ 
+        message: 'Already unsubscribed or invalid token',
+        status: 'already_processed'
+      });
+    }
     
     // Enqueue unsubscribe processing job with user data for immediate response
     enqueueUnsubscribeByTokenJob(token, userData).catch((err) => {

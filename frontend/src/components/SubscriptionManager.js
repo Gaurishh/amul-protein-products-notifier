@@ -114,6 +114,9 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
     return product ? product.name : productId;
   };
 
+  // Check if products are still loading
+  const productsLoading = user.pincode && productList.length === 0;
+
   if (editing) {
     return (
       <div>
@@ -161,16 +164,20 @@ function SubscriptionManager({ email, user, onUpdate, onUnsubscribe, goToEmailPa
       <p><b>Email:</b> {email}</p>
       <p><b>City:</b> {getCityFromPincode(user.pincode) || 'Unknown'}</p>
       <p><b>Products:</b></p>
-      {Object.entries(categorizeProducts(user.products)).map(([cat, items]) =>
-        items.length > 0 && (
-          <div key={cat} style={{ marginBottom: 12 }}>
-            <h4 style={{ marginBottom: 6 }}>{cat}</h4>
-            <ul>
-              {items.map((productId, idx) => (
-                <li key={idx}>{getProductName(productId)}</li>
-              ))}
-            </ul>
-          </div>
+      {productsLoading ? (
+        <div style={{ color: '#666', fontStyle: 'italic' }}>Loading product details...</div>
+      ) : (
+        Object.entries(categorizeProducts(user.products)).map(([cat, items]) =>
+          items.length > 0 && (
+            <div key={cat} style={{ marginBottom: 12 }}>
+              <h4 style={{ marginBottom: 6 }}>{cat}</h4>
+              <ul>
+                {items.map((productId, idx) => (
+                  <li key={idx}>{getProductName(productId)}</li>
+                ))}
+              </ul>
+            </div>
+          )
         )
       )}
       <div className="button-group">

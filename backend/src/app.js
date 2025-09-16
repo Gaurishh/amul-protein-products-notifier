@@ -69,7 +69,12 @@ processQueue.process('send_stock_notification', async (job) => {
       return { success: true, subscriber, skipped: true, reason: 'unverified' };
     }
     
-    const result = await sendBulkStockNotification(subscriber, products, pincode, user.token);
+    if (user.recentlyUnsubscribed) {
+      console.log(`Skipping stock email for recently unsubscribed user: ${subscriber}`);
+      return { success: true, subscriber, skipped: true, reason: 'recently_unsubscribed' };
+    }
+    
+    const result = await sendBulkStockNotification(subscriber, products, pincode, user.token, mongoose);
     
     if (result) {
       console.log(`Successfully sent stock notification to ${subscriber}`);
@@ -248,6 +253,7 @@ processQueue.process('process_unsubscribe_by_token', async (job) => {
     
     if (result) {
       console.log(`Successfully processed unsubscribe by token for ${userData.email}`);
+      console.log(`User ${userData.email} marked as recentlyUnsubscribed=true with 24-hour cooldown`);
       return { success: true, email: userData.email, productsCount: productNames.length };
     } else {
       throw new Error(`Failed to send unsubscribe confirmation email to ${userData.email}`);
@@ -284,7 +290,7 @@ processQueue.process('send_email_verification', async (job) => {
 });
 
 // Process email verification completion - when user clicks verification link
-processQueue.process('process_email_verification', async (job) => {
+processQueue.process('process_email_verification_completion', async (job) => {
   const { token } = job.data;
   try {
     console.log(`Processing email verification for token ${token}`);

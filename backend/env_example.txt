@@ -1,8 +1,7 @@
-# AWS SES Configuration
-AWS_ACCESS_KEY_ID=your-access-key-id
-AWS_SECRET_ACCESS_KEY=your-secret-access-key
-AWS_REGION=us-east-1
+# Brevo API Configuration
+BREVO_API_KEY=your-brevo-api-key
 FROM_EMAIL=noreply@gaurish.us.kg
+FROM_NAME=Amul Products Notifier
 
 # Database and Application Configuration
 MONGO_URI=your-mongodb-connection-string

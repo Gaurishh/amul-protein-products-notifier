@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   pincode: { type: String, required: true },
   token: { type: String, required: true, unique: true }, // Persistent token for secure links
   emailVerified: { type: Boolean, default: false },
+  recentlyUnsubscribed: { type: Boolean, default: false }, // Flag to track recently unsubscribed users
   // TTL: documents with a past expiresAt will be auto-removed by MongoDB
   expiresAt: { type: Date, default: null }
 });
